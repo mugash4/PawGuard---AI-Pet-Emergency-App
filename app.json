@@ -55,8 +55,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "5a2b5500-757d-4cba-81f9-d1a5c6aac126"
       }
-    }
+    },
+    "owner": "stinemug"
   }
 }
