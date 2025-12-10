@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user is premium
+    function isPremium() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true;
+    }
+    
+    // Config collection (API keys) - NO CLIENT ACCESS
+    match /config/{document=**} {
+      allow read, write: if false; // Only Cloud Functions can access
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read their own profile
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can update their own profile (except role and isPremium)
+      allow update: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPremium']);
+      
+      // Admins can read and write any user
+      allow read, write: if isAdmin();
+    }
+    
+    // AI Queries - users can only read their own
+    match /aiQueries/{queryId} {
+      allow read: if request.auth != null && 
+                    queryId.matches(request.auth.uid + '.*');
+      allow write: if false; // Only Cloud Functions can write
+    }
+    
+    // Food Cache - anyone authenticated can read
+    match /foodCache/{foodName} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only Cloud Functions can write
+    }
+    
+    // Pet Profiles
+    match /petProfiles/{profileId} {
+      allow read, write: if request.auth != null && 
+                           resource.data.userId == request.auth.uid;
+    }
+    
+    // Subscriptions (for future in-app purchase validation)
+    match /subscriptions/{subscriptionId} {
+      allow read: if request.auth != null && 
+                    resource.data.userId == request.auth.uid;
+      allow write: if false; // Only Cloud Functions can write
+    }
+  }
+}
