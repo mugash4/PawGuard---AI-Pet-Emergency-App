@@ -7,7 +7,7 @@ import CryptoJS from 'crypto-js';
  * Reads encrypted API keys from Firestore (set via admin panel)
  */
 
-const ENCRYPTION_KEY = 'pawguard-super-secret-key-2024'; // Must match admin panel
+const ENCRYPTION_KEY = 'U2FsdGVkX18F1Vpct1hJ3l6OtuwsxEkz3v0KjHv3QYvnWNGSchqzzGNt86IMWXms+8UvNPxgPvbVibjgwRgq0w=='; // Must match admin panel
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 let cachedApiKey = null; // Cache the API key to avoid repeated Firestore reads
