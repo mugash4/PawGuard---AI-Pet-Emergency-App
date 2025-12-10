@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../context/UserContext';
+import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING, SHADOWS } from '../constants/theme';
 
-export default function FoodCheckerScreen() {
+export default function FoodCheckerScreen({ navigation }) {
+  // Track navigation for interstitial ads
+  useInterstitialAd(navigation);
+
   const [query, setQuery] = useState('');
   const { user, getRemainingAIQueries } = useUser();
 

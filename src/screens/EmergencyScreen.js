@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
-export default function EmergencyScreen() {
+export default function EmergencyScreen({ navigation }) {
+  // Track navigation for interstitial ads
+  useInterstitialAd(navigation);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>

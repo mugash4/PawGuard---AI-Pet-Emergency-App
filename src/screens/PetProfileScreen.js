@@ -3,9 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../context/UserContext';
+import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING, SHADOWS } from '../constants/theme';
 
-export default function PetProfileScreen() {
+export default function PetProfileScreen({ navigation }) {
+  // Track navigation for interstitial ads
+  useInterstitialAd(navigation);
+
   const { user } = useUser();
 
   return (
