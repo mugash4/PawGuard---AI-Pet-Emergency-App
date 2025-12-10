@@ -9,13 +9,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../context/UserContext';
+import AdBanner from '../components/AdBanner';
+import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useUser();
 
+  // Track navigation for interstitial ads (free users only)
+  useInterstitialAd(navigation);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -139,6 +144,9 @@ export default function HomeScreen({ navigation }) {
 
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
+
+      {/* AdMob Banner at Bottom (only for free users) */}
+      <AdBanner />
     </SafeAreaView>
   );
 }

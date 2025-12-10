@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-} from 'react';
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,14 +31,6 @@ const PLANS = [
     badge: 'Best Choice - Save 75%',
     recommended: true,
     priceValue: 9.99,
-  },
-  {
-    id: 'lifetime',
-    name: 'Lifetime',
-    price: '$29.99',
-    period: 'once',
-    description: 'Pay once, use forever',
-    priceValue: 29.99,
   },
 ];
 
