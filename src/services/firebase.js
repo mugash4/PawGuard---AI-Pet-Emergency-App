@@ -1,11 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getFunctions } from 'firebase/functions';
-import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 // Firebase configuration
-// IMPORTANT: Replace these with your actual Firebase project credentials
 const firebaseConfig = {
   apiKey: "AIzaSyAxPyExuVn3oRmun4xRwKvJ_MMTAgGVWow",
   authDomain: "pawguard-ee74c.firebaseapp.com",
@@ -17,21 +14,23 @@ const firebaseConfig = {
 
 let app;
 let db;
-let functions;
-let storage;
 let auth;
 
-export const initializeFirebase = () => {
+export const initializeFirebase = async () => {
   if (!app) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
-    functions = getFunctions(app);
-    storage = getStorage(app);
     auth = getAuth(app);
     
-    console.log('✅ Firebase initialized successfully');
+    // Auto sign-in anonymously for API access
+    try {
+      await signInAnonymously(auth);
+      console.log('✅ Firebase initialized with anonymous auth');
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+    }
   }
-  return { app, db, functions, storage, auth };
+  return { app, db, auth };
 };
 
-export { app, db, functions, storage, auth };
+export { app, db, auth };

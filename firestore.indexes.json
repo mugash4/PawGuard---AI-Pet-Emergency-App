@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "aiQueries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aiUsage",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "count", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

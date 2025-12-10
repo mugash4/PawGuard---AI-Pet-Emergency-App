@@ -2,15 +2,14 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Firebase configuration
-// IMPORTANT: Replace these with your actual Firebase project credentials
+// Firebase configuration - USE YOUR ACTUAL CONFIG
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAxPyExuVn3oRmun4xRwKvJ_MMTAgGVWow",
+  authDomain: "pawguard-ee74c.firebaseapp.com",
+  projectId: "pawguard-ee74c",
+  storageBucket: "pawguard-ee74c.firebasestorage.app",
+  messagingSenderId: "697373184312",
+  appId: "1:697373184312:web:af57ab587244f963a171cd"
 };
 
 // Initialize Firebase only once

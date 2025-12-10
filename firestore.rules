@@ -14,15 +14,21 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true;
     }
     
-    // Config collection (API keys) - NO CLIENT ACCESS
+    // Config collection (API keys)
+    // IMPORTANT: Allow authenticated users to READ API keys (encrypted)
+    // Only admins can WRITE
     match /config/{document=**} {
-      allow read, write: if false; // Only Cloud Functions can access
+      allow read: if request.auth != null;  // Any authenticated user can read
+      allow write: if isAdmin();             // Only admins can write
     }
     
     // Users collection
     match /users/{userId} {
       // Anyone authenticated can read their own profile
       allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can create their own profile (for anonymous auth)
+      allow create: if request.auth != null && request.auth.uid == userId;
       
       // Users can update their own profile (except role and isPremium)
       allow update: if request.auth != null && 
@@ -33,30 +39,38 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
-    // AI Queries - users can only read their own
-    match /aiQueries/{queryId} {
-      allow read: if request.auth != null && 
-                    queryId.matches(request.auth.uid + '.*');
-      allow write: if false; // Only Cloud Functions can write
+    // AI Query Usage Tracking
+    match /aiUsage/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Food Cache - anyone authenticated can read
+    // AI Queries Log (for analytics)
+    match /aiQueries/{queryId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Food Cache - anyone authenticated can read, app can write
     match /foodCache/{foodName} {
       allow read: if request.auth != null;
-      allow write: if false; // Only Cloud Functions can write
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
     }
     
     // Pet Profiles
     match /petProfiles/{profileId} {
-      allow read, write: if request.auth != null && 
-                           resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
     // Subscriptions (for future in-app purchase validation)
     match /subscriptions/{subscriptionId} {
-      allow read: if request.auth != null && 
-                    resource.data.userId == request.auth.uid;
-      allow write: if false; // Only Cloud Functions can write
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
     }
   }
 }
