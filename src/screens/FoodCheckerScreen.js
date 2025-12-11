@@ -256,6 +256,9 @@ export default function FoodCheckerScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      {/* AdMob Banner */}
+      <AdBanner />
     </SafeAreaView>
   );
 }

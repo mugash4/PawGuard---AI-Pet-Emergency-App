@@ -106,6 +106,22 @@ export default function HomeScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.featureCard}
+          onPress={() => navigation.navigate('AIChat')}
+        >
+          <View style={[styles.featureIcon, { backgroundColor: '#F3E5FF' }]}>
+            <Ionicons name="sparkles" size={32} color="#9C27B0" />
+          </View>
+          <View style={styles.featureContent}>
+            <Text style={styles.featureTitle}>AI Emergency Assistant</Text>
+            <Text style={styles.featureDescription}>
+              Chat with AI for instant pet advice
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={COLORS.textLight} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.featureCard}
           onPress={() => navigation.navigate('FoodChecker')}
         >
           <View style={[styles.featureIcon, { backgroundColor: '#E5F5E5' }]}>
