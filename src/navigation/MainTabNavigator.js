@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 import { COLORS } from '../constants/theme';
 
 // Import screens
@@ -36,12 +37,21 @@ export default function MainTabNavigator() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textLight,
         tabBarStyle: {
-          paddingBottom: 8,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 8, // Add bottom padding for iOS notch
           paddingTop: 8,
-          height: 60,
+          height: Platform.OS === 'ios' ? 85 : 60,
           backgroundColor: COLORS.surface,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
+          position: 'absolute', // FIXED: Make tab bar float above content
+          bottom: 0,
+          left: 0,
+          right: 0,
+          elevation: 8, // Android shadow
+          shadowColor: '#000', // iOS shadow
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         },
         tabBarLabelStyle: {
           fontSize: 12,

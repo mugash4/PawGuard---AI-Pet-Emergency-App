@@ -19,9 +19,17 @@ export default function HomeScreen({ navigation }) {
   // Track navigation for interstitial ads (free users only)
   useInterstitialAd(navigation);
 
+  // Navigate to specific emergency scenarios
+  const navigateToEmergency = (scenarioType) => {
+    navigation.navigate('Emergency', { filter: scenarioType });
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }} // Space for tab bar
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -47,32 +55,34 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - FIXED: 2 per row */}
         <Text style={styles.sectionTitle}>Emergency First Aid</Text>
         <View style={styles.quickActions}>
           <QuickActionCard
             icon="heart"
             title="Breath & Heart"
             color="#FF6B6B"
-            onPress={() => navigation.navigate('Emergency')}
+            onPress={() => navigateToEmergency('Breathing')}
           />
           <QuickActionCard
             icon="medkit"
             title="Reanimation"
             color="#4ECDC4"
-            onPress={() => navigation.navigate('Emergency')}
+            onPress={() => navigateToEmergency('Other')}
           />
+        </View>
+        <View style={styles.quickActions}>
           <QuickActionCard
             icon="fitness"
             title="Choking"
             color="#FFD93D"
-            onPress={() => navigation.navigate('Emergency')}
+            onPress={() => navigateToEmergency('Choking')}
           />
           <QuickActionCard
             icon="water"
             title="Bleeding"
             color="#95E1D3"
-            onPress={() => navigation.navigate('Emergency')}
+            onPress={() => navigateToEmergency('Bleeding')}
           />
         </View>
 
@@ -234,19 +244,18 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     marginTop: SPACING.md,
   },
+  // FIXED: 2 items per row layout
   quickActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.xl,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   quickActionCard: {
-    width: '48%',
+    width: '48%', // Exactly 2 per row
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-    marginRight: '4%',
-    marginBottom: SPACING.md,
     alignItems: 'center',
     ...SHADOWS.small,
   },

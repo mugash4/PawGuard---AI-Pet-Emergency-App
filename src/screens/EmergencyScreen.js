@@ -13,13 +13,16 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Modal
+  Modal,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 import { getEmergencyScenarios } from '../services/contentService';
+import AdBanner from '../components/AdBanner';
 
-export default function EmergencyScreen({ navigation }) {
+export default function EmergencyScreen({ navigation, route }) {
   const [scenarios, setScenarios] = useState([]);
   const [filteredScenarios, setFilteredScenarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +36,13 @@ export default function EmergencyScreen({ navigation }) {
   useEffect(() => {
     loadEmergencyScenarios();
   }, []);
+
+  // Handle filter from navigation params (when coming from Home screen)
+  useEffect(() => {
+    if (route.params?.filter) {
+      setSelectedCategory(route.params.filter);
+    }
+  }, [route.params?.filter]);
 
   useEffect(() => {
     filterScenarios();
@@ -59,10 +69,11 @@ export default function EmergencyScreen({ navigation }) {
     }
 
     // Filter by search query
-    if (searchQuery) {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(s => 
-        s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.symptoms.some(symptom => symptom.toLowerCase().includes(searchQuery.toLowerCase()))
+        s.title.toLowerCase().includes(query) ||
+        s.symptoms.some(symptom => symptom.toLowerCase().includes(query))
       );
     }
 
@@ -75,7 +86,7 @@ export default function EmergencyScreen({ navigation }) {
   };
 
   const getSeverityColor = (severity) => {
-    switch (severity) {
+    switch (severity?.toLowerCase()) {
       case 'critical': return '#FF3B30';
       case 'urgent': return '#FF9500';
       case 'moderate': return '#FF8C61';
@@ -85,7 +96,7 @@ export default function EmergencyScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading emergency guides...</Text>
@@ -95,25 +106,33 @@ export default function EmergencyScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>🚨 Emergency Help</Text>
         <Text style={styles.subtitle}>{filteredScenarios.length} scenarios available</Text>
       </View>
 
-      {/* Search Bar */}
+      {/* Search Bar - FIXED */}
       <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search emergency or symptom..."
           placeholderTextColor={COLORS.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          returnKeyType="search"
+          autoCorrect={false}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Category Filter */}
+      {/* Category Filter - FIXED: Scrollable tabs */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -128,6 +147,7 @@ export default function EmergencyScreen({ navigation }) {
               selectedCategory === category && styles.categoryButtonActive
             ]}
             onPress={() => setSelectedCategory(category)}
+            activeOpacity={0.7}
           >
             <Text style={[
               styles.categoryText,
@@ -140,15 +160,19 @@ export default function EmergencyScreen({ navigation }) {
       </ScrollView>
 
       {/* Emergency Scenarios List */}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: 120 }} // Space for tab bar + ad banner
+      >
         {filteredScenarios.map((scenario) => (
           <TouchableOpacity
             key={scenario.id}
             style={styles.scenarioCard}
             onPress={() => openScenarioModal(scenario)}
+            activeOpacity={0.7}
           >
             <View style={styles.scenarioHeader}>
-              <Text style={styles.scenarioEmoji}>{scenario.illustration}</Text>
+              <Text style={styles.scenarioEmoji}>{scenario.illustration || '🚨'}</Text>
               <View style={styles.scenarioInfo}>
                 <Text style={styles.scenarioTitle}>{scenario.title}</Text>
                 <View style={[
@@ -159,7 +183,7 @@ export default function EmergencyScreen({ navigation }) {
                     styles.severityText,
                     { color: getSeverityColor(scenario.severity) }
                   ]}>
-                    {scenario.severity.toUpperCase()}
+                    {scenario.severity?.toUpperCase() || 'MODERATE'}
                   </Text>
                 </View>
               </View>
@@ -186,6 +210,9 @@ export default function EmergencyScreen({ navigation }) {
         )}
       </ScrollView>
 
+      {/* AdMob Banner */}
+      <AdBanner />
+
       {/* Scenario Detail Modal */}
       <Modal
         visible={modalVisible}
@@ -200,16 +227,16 @@ export default function EmergencyScreen({ navigation }) {
                   onPress={() => setModalVisible(false)}
                   style={styles.closeButton}
                 >
-                  <Text style={styles.closeButtonText}>✕</Text>
+                  <Ionicons name="close" size={24} color={COLORS.text} />
                 </TouchableOpacity>
-                <Text style={styles.modalEmoji}>{selectedScenario.illustration}</Text>
+                <Text style={styles.modalEmoji}>{selectedScenario.illustration || '🚨'}</Text>
                 <Text style={styles.modalTitle}>{selectedScenario.title}</Text>
                 <View style={[
                   styles.modalSeverityBadge,
                   { backgroundColor: getSeverityColor(selectedScenario.severity) }
                 ]}>
                   <Text style={styles.modalSeverityText}>
-                    {selectedScenario.severity.toUpperCase()}
+                    {selectedScenario.severity?.toUpperCase() || 'MODERATE'}
                   </Text>
                 </View>
               </View>
@@ -295,10 +322,17 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   searchContainer: {
-    padding: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     backgroundColor: '#FFFFFF',
   },
+  searchIcon: {
+    marginRight: 8,
+  },
   searchInput: {
+    flex: 1,
     backgroundColor: COLORS.background,
     padding: 12,
     borderRadius: 12,
@@ -338,11 +372,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   scenarioHeader: {
     flexDirection: 'row',
@@ -424,16 +464,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 20,
-    color: COLORS.text,
+    zIndex: 10,
   },
   modalEmoji: {
     fontSize: 60,
@@ -491,11 +528,17 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   stepNumber: {
     width: 32,
