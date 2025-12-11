@@ -4,10 +4,10 @@
     "slug": "pawguard",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#FF8C61"
     },
@@ -17,25 +17,23 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pawguard.app",
-      "buildNumber": "1",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FF8C61"
       },
       "package": "com.pawguard.app",
       "versionCode": 1,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-2371616866592450~9934191141"
-      },
-      "kotlinVersion": "2.0.21"
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-font",
@@ -43,7 +41,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/images/notification-icon.png",
           "color": "#FF8C61"
         }
       ],
@@ -52,6 +50,21 @@
         {
           "androidAppId": "ca-app-pub-2371616866592450~9934191141",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "minSdkVersion": 24,
+            "kotlinVersion": "2.0.21"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
         }
       ]
     ],
