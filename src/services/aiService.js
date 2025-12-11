@@ -4,8 +4,8 @@
  * Secure API key management via Firebase
  */
 
-import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 /**
  * Call AI with automatic LLM selection
@@ -24,11 +24,11 @@ export const callAI = async (message, context = 'user') => {
 
     const apiKeys = configDoc.data();
     
-    // Try LLMs in order: OpenRouter -> DeepSeek -> OpenAI
-    if (apiKeys.openrouter) {
-      return await callOpenRouter(message, apiKeys.openrouter);
-    } else if (apiKeys.deepseek) {
+    // Try LLMs in order: DeepSeek -> OpenRouter -> OpenAI
+    if (apiKeys.deepseek) {
       return await callDeepSeek(message, apiKeys.deepseek);
+    } else if (apiKeys.openrouter) {
+      return await callOpenRouter(message, apiKeys.openrouter);
     } else if (apiKeys.openai) {
       return await callOpenAI(message, apiKeys.openai);
     } else {
@@ -55,7 +55,7 @@ async function callDeepSeek(message, apiKey) {
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful pet care assistant. Provide brief, accurate, actionable advice.'
+          content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
         },
         {
           role: 'user',
@@ -68,7 +68,8 @@ async function callDeepSeek(message, apiKey) {
   });
 
   if (!response.ok) {
-    throw new Error(`DeepSeek API error: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
@@ -90,7 +91,7 @@ async function callOpenAI(message, apiKey) {
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful pet care assistant. Provide brief, accurate, actionable advice.'
+          content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
         },
         {
           role: 'user',
@@ -103,7 +104,8 @@ async function callOpenAI(message, apiKey) {
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
@@ -127,7 +129,7 @@ async function callOpenRouter(message, apiKey) {
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful pet care assistant. Provide brief, accurate, actionable advice.'
+          content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
         },
         {
           role: 'user',
@@ -140,7 +142,8 @@ async function callOpenRouter(message, apiKey) {
   });
 
   if (!response.ok) {
-    throw new Error(`OpenRouter API error: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
@@ -162,23 +165,131 @@ export const checkFoodSafety = async (foodName) => {
 
 Keep it brief and actionable.`;
 
-  const response = await callAI(prompt, 'user');
-  return JSON.parse(response);
+  try {
+    const response = await callAI(prompt, 'user');
+    
+    // Try to parse JSON response
+    try {
+      return JSON.parse(response);
+    } catch (parseError) {
+      // If JSON parsing fails, extract structured data from text
+      console.warn('JSON parse failed, extracting from text:', response);
+      
+      // Fallback: create structured response
+      return {
+        safetyLevel: response.toLowerCase().includes('toxic') || response.toLowerCase().includes('dangerous') ? 'toxic' :
+                     response.toLowerCase().includes('caution') || response.toLowerCase().includes('careful') ? 'caution' : 'safe',
+        emoji: response.toLowerCase().includes('toxic') ? '☠️' : 
+               response.toLowerCase().includes('caution') ? '⚠️' : '✅',
+        shortExplanation: response.substring(0, 200),
+        symptoms: [],
+        advice: 'Consult with your veterinarian for specific guidance.'
+      };
+    }
+  } catch (error) {
+    console.error('Food safety check error:', error);
+    throw error;
+  }
 };
 
 /**
  * AI Chat for emergencies
  */
 export const chatWithAI = async (message, conversationHistory = []) => {
-  const context = conversationHistory
-    .map(msg => `${msg.role}: ${msg.content}`)
-    .join('\n');
-  
-  const fullPrompt = context 
-    ? `Previous conversation:\n${context}\n\nUser: ${message}`
-    : message;
+  const systemPrompt = `You are a helpful pet emergency assistant for dog owners. Provide clear, concise, actionable advice for pet emergencies and general care questions. Always prioritize pet safety and recommend veterinary consultation when necessary.
 
-  return await callAI(fullPrompt, 'user');
+If the situation seems serious or life-threatening, immediately advise contacting a veterinarian or emergency vet clinic.
+
+Keep responses brief (2-4 sentences) unless more detail is specifically requested.`;
+
+  try {
+    // Build conversation context
+    const messages = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    // Add conversation history (last 5 messages to keep context manageable)
+    const recentHistory = conversationHistory.slice(-5);
+    recentHistory.forEach(msg => {
+      messages.push({
+        role: msg.isBot ? 'assistant' : 'user',
+        content: msg.text
+      });
+    });
+
+    // Add current message
+    messages.push({ role: 'user', content: message });
+
+    // Get API keys from Firebase
+    const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
+    
+    if (!configDoc.exists()) {
+      throw new Error('API keys not configured. Please contact admin.');
+    }
+
+    const apiKeys = configDoc.data();
+
+    // Call appropriate API
+    let response;
+    if (apiKeys.deepseek) {
+      response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKeys.deepseek}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+    } else if (apiKeys.openrouter) {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKeys.openrouter}`,
+          'HTTP-Referer': 'https://pawguard.app',
+          'X-Title': 'PawGuard Pet Emergency App'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-haiku',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+    } else if (apiKeys.openai) {
+      response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKeys.openai}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+    } else {
+      throw new Error('No AI API keys configured');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`AI API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Chat AI error:', error);
+    throw error;
+  }
 };
 
 /**
@@ -196,8 +307,24 @@ Provide emergency guidance in JSON format:
 
 Be concise and prioritize safety.`;
 
-  const response = await callAI(prompt, 'user');
-  return JSON.parse(response);
+  try {
+    const response = await callAI(prompt, 'user');
+    
+    try {
+      return JSON.parse(response);
+    } catch (parseError) {
+      console.warn('JSON parse failed for symptoms, using fallback');
+      return {
+        urgency: 'urgent',
+        possibleConditions: ['Unknown condition - requires veterinary examination'],
+        immediateActions: ['Contact veterinarian immediately', 'Keep pet calm and comfortable'],
+        whenToSeeVet: 'As soon as possible'
+      };
+    }
+  } catch (error) {
+    console.error('Symptom analysis error:', error);
+    throw error;
+  }
 };
 
 /**
@@ -208,33 +335,44 @@ export const checkQueryLimit = async (userId, isPremium) => {
     return { allowed: true, remaining: 999 };
   }
 
-  // Check daily limit (5 queries for free users)
-  const today = new Date().toISOString().split('T')[0];
-  const queryDoc = await getDoc(doc(db, 'aiQueries', `${userId}_${today}`));
-  
-  const currentCount = queryDoc.exists() ? queryDoc.data().count : 0;
-  
-  if (currentCount >= 5) {
-    return { allowed: false, remaining: 0 };
-  }
+  try {
+    // Check daily limit (5 queries for free users)
+    const today = new Date().toISOString().split('T')[0];
+    const queryDoc = await getDoc(doc(db, 'aiQueries', `${userId}_${today}`));
+    
+    const currentCount = queryDoc.exists() ? queryDoc.data().count : 0;
+    
+    if (currentCount >= 5) {
+      return { allowed: false, remaining: 0 };
+    }
 
-  return { allowed: true, remaining: 5 - currentCount };
+    return { allowed: true, remaining: 5 - currentCount };
+  } catch (error) {
+    console.error('Error checking query limit:', error);
+    // On error, allow the query but return cautious remaining count
+    return { allowed: true, remaining: 5 };
+  }
 };
 
 /**
  * Track AI query usage
  */
 export const trackQueryUsage = async (userId) => {
-  const today = new Date().toISOString().split('T')[0];
-  const queryRef = doc(db, 'aiQueries', `${userId}_${today}`);
-  const queryDoc = await getDoc(queryRef);
-  
-  const currentCount = queryDoc.exists() ? queryDoc.data().count : 0;
-  
-  await setDoc(queryRef, {
-    count: currentCount + 1,
-    date: today,
-    userId: userId,
-    lastQuery: new Date().toISOString()
-  }, { merge: true });
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const queryRef = doc(db, 'aiQueries', `${userId}_${today}`);
+    const queryDoc = await getDoc(queryRef);
+    
+    const currentCount = queryDoc.exists() ? queryDoc.data().count : 0;
+    
+    await setDoc(queryRef, {
+      count: currentCount + 1,
+      date: today,
+      userId: userId,
+      lastQuery: new Date().toISOString()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error tracking query usage:', error);
+    // Don't throw - tracking is not critical
+  }
 };

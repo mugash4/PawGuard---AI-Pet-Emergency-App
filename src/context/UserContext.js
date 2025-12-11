@@ -27,6 +27,7 @@ export function UserProvider({ children }) {
 
       setUser({
         id: deviceId,
+        userId: deviceId, // Add userId for backward compatibility
         isPremium: parsedData.isPremium || false,
         isAdmin: parsedData.isAdmin || false,
         subscriptionType: parsedData.subscriptionType || 'free',
@@ -107,3 +108,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+export { UserContext };
