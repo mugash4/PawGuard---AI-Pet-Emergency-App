@@ -416,11 +416,6 @@ export default function KnowledgeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {!user?.isPremium && (
-              <Text style={styles.chatLimitText}>
-                {chatMessages.filter(m => m.role === 'user').length}/5 free messages today
-              </Text>
-            )}
             
             {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
               <UpgradePrompt
