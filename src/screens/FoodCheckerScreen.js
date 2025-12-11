@@ -3,7 +3,7 @@
  * Multi-LLM support, query limits, visual results
  */
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  Image
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserContext } from '../context/UserContext';
@@ -22,36 +22,73 @@ import AdBanner from '../components/AdBanner';
 import UpgradePrompt from '../components/UpgradePrompt';
 
 export default function FoodCheckerScreen({ navigation }) {
-  const { user } = useContext(UserContext);
+  const context = useContext(UserContext);
+  
+  // Safety check for context
+  if (!context) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Error: User context not available</Text>
+          <Text style={styles.errorSubtext}>Please restart the app</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const { user } = context;
   const [foodName, setFoodName] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [remaining, setRemaining] = useState(null);
 
-  React.useEffect(() => {
-    loadRemainingQueries();
-  }, []);
+  useEffect(() => {
+    if (user) {
+      loadRemainingQueries();
+    }
+  }, [user]);
 
   const loadRemainingQueries = async () => {
     try {
-      const limit = await checkQueryLimit(user.userId, user.isPremium);
+      if (!user?.userId && !user?.id) {
+        console.warn('No user ID available');
+        return;
+      }
+      const userId = user.userId || user.id;
+      const limit = await checkQueryLimit(userId, user.isPremium);
       setRemaining(limit.remaining);
     } catch (error) {
       console.error('Error loading remaining queries:', error);
+      setRemaining(5); // Default to 5 on error
     }
   };
 
   const handleCheckFood = async () => {
     if (!foodName.trim()) {
+      Alert.alert('Enter Food Name', 'Please enter a food name to check');
+      return;
+    }
+
+    if (!user?.userId && !user?.id) {
+      Alert.alert('Error', 'User session not available. Please restart the app.');
       return;
     }
 
     try {
+      const userId = user.userId || user.id;
+      
       // Check query limit
-      const limit = await checkQueryLimit(user.userId, user.isPremium);
+      const limit = await checkQueryLimit(userId, user.isPremium);
       
       if (!limit.allowed) {
-        alert('Daily AI query limit reached (5/day for free users). Upgrade to Premium for unlimited queries!');
+        Alert.alert(
+          'Daily Limit Reached',
+          'You\'ve used all 5 free AI queries today. Upgrade to Premium for unlimited queries!',
+          [
+            { text: 'Maybe Later', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => navigation.navigate('Subscription') }
+          ]
+        );
         return;
       }
 
@@ -62,13 +99,17 @@ export default function FoodCheckerScreen({ navigation }) {
       const response = await checkFoodSafety(foodName);
       
       // Track usage
-      await trackQueryUsage(user.userId);
+      await trackQueryUsage(userId);
       
       setResult(response);
       loadRemainingQueries(); // Refresh remaining count
     } catch (error) {
       console.error('Error checking food:', error);
-      alert('Error checking food safety. Please try again.');
+      Alert.alert(
+        'Error',
+        'Unable to check food safety. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
@@ -91,6 +132,18 @@ export default function FoodCheckerScreen({ navigation }) {
       default: return '❓';
     }
   };
+
+  // Show loading state while user is being initialized
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -123,6 +176,7 @@ export default function FoodCheckerScreen({ navigation }) {
               onSubmitEditing={handleCheckFood}
               returnKeyType="search"
               autoCapitalize="none"
+              editable={!loading}
             />
             <TouchableOpacity
               style={[
@@ -208,13 +262,12 @@ export default function FoodCheckerScreen({ navigation }) {
         )}
 
         {/* Upgrade Prompt for Free Users */}
-        {!user.isPremium && (
+        {!user.isPremium && remaining !== null && remaining <= 1 && (
           <UpgradePrompt
-            message="You've used your daily free AI food checks. Upgrade for unlimited access!"
+            message="Running low on free AI checks! Upgrade for unlimited access!"
             feature="unlimited food safety checks"
           />
         )}
-
 
         {/* Common Foods Quick Reference */}
         {!result && (
@@ -234,8 +287,8 @@ export default function FoodCheckerScreen({ navigation }) {
                   style={styles.quickRefItem}
                   onPress={() => {
                     setFoodName(item.name);
-                    handleCheckFood();
                   }}
+                  disabled={loading}
                 >
                   <Text style={styles.quickRefEmoji}>{item.emoji}</Text>
                   <Text style={styles.quickRefName}>{item.name}</Text>
@@ -269,7 +322,7 @@ export default function FoodCheckerScreen({ navigation }) {
       </ScrollView>
 
       {/* AdMob Banner */}
-      <AdBanner />
+      {!user.isPremium && <AdBanner />}
     </SafeAreaView>
   );
 }
@@ -278,6 +331,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF3B30',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   header: {
     padding: SPACING.xl,

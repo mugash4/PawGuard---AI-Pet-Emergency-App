@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 
-const UserContext = createContext();
+// Export UserContext so it can be imported in other files
+export const UserContext = createContext();
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -27,6 +28,7 @@ export function UserProvider({ children }) {
 
       setUser({
         id: deviceId,
+        userId: deviceId, // Add userId property for compatibility
         isPremium: parsedData.isPremium || false,
         isAdmin: parsedData.isAdmin || false,
         subscriptionType: parsedData.subscriptionType || 'free',
@@ -36,6 +38,17 @@ export function UserProvider({ children }) {
       });
     } catch (error) {
       console.error('Error loading user:', error);
+      // Set a default user to prevent crashes
+      const fallbackId = `fallback_${Date.now()}`;
+      setUser({
+        id: fallbackId,
+        userId: fallbackId,
+        isPremium: false,
+        isAdmin: false,
+        subscriptionType: 'free',
+        dailyAIUsage: {},
+        createdAt: new Date().toISOString()
+      });
     } finally {
       setLoading(false);
     }
@@ -44,7 +57,11 @@ export function UserProvider({ children }) {
   const updateUser = async (updates) => {
     const updatedUser = { ...user, ...updates };
     setUser(updatedUser);
-    await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+    try {
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error('Error saving user data:', error);
+    }
   };
 
   const upgradeToPremium = async (subscriptionType) => {

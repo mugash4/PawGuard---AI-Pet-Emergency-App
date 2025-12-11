@@ -14,6 +14,7 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,7 +43,6 @@ export default function KnowledgeScreen({ navigation }) {
   const [showExplanation, setShowExplanation] = useState(false);
   
   // AI Chat state
-  const [chatVisible, setChatVisible] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -62,6 +62,7 @@ export default function KnowledgeScreen({ navigation }) {
       setArticles(filtered);
     } catch (error) {
       console.error('Error loading articles:', error);
+      Alert.alert('Error', 'Failed to load articles. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,7 @@ export default function KnowledgeScreen({ navigation }) {
       setShowExplanation(false);
     } catch (error) {
       console.error('Error loading quiz:', error);
-      alert('Failed to load quiz. Please try again.');
+      Alert.alert('Error', 'Failed to load quiz. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -115,20 +116,19 @@ export default function KnowledgeScreen({ navigation }) {
   const sendChatMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
 
-    // Check query limit
-    const limit = await checkQueryLimit(user.userId, user.isPremium);
+    // FIXED: Changed user.userId to user.id
+    const limit = await checkQueryLimit(user.id, user.isPremium);
     if (!limit.allowed) {
-      alert('Daily AI query limit reached. Upgrade to Premium for unlimited queries!');
+      Alert.alert(
+        'Daily Limit Reached',
+        'You\'ve used all 5 free AI queries today. Upgrade to Premium for unlimited queries!',
+        [
+          { text: 'Maybe Later', style: 'cancel' },
+          { text: 'Upgrade Now', onPress: () => navigation.navigate('Subscription') }
+        ]
+      );
       return;
     }
-
-    {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
-      <UpgradePrompt
-        message="Enjoying AI Chat? Upgrade for unlimited conversations!"
-        feature="unlimited AI chat"
-      />
-    )}
-
 
     const userMessage = { role: 'user', content: chatInput.trim() };
     setChatMessages([...chatMessages, userMessage]);
@@ -139,12 +139,19 @@ export default function KnowledgeScreen({ navigation }) {
       const response = await chatWithAI(userMessage.content, chatMessages);
       const aiMessage = { role: 'assistant', content: response };
       setChatMessages(prev => [...prev, aiMessage]);
-      await trackQueryUsage(user.userId);
+      
+      // FIXED: Changed user.userId to user.id
+      await trackQueryUsage(user.id);
     } catch (error) {
       console.error('Chat error:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to get AI response. Please check your API keys are configured correctly.',
+        [{ text: 'OK' }]
+      );
       setChatMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again.' 
+        content: '❌ Sorry, I encountered an error. Please make sure API keys are configured in Firebase Console.' 
       }]);
     } finally {
       setChatLoading(false);
@@ -335,7 +342,7 @@ export default function KnowledgeScreen({ navigation }) {
         {activeTab === 'quiz' && !quizActive && quizQuestions.length > 0 && (
           <View style={styles.quizResults}>
             <Text style={styles.resultsEmoji}>
-              {score === quizQuestions.length ? '🏆' : score >= quizQuestions.length * 0.7 ? '🎉' : '📚'}
+              {score === quizQuestions.length ? '🎉' : score >= quizQuestions.length * 0.7 ? '😊' : '📚'}
             </Text>
             <Text style={styles.resultsTitle}>Quiz Complete!</Text>
             <Text style={styles.resultsScore}>
@@ -375,7 +382,12 @@ export default function KnowledgeScreen({ navigation }) {
                     msg.role === 'user' ? styles.chatBubbleUser : styles.chatBubbleAI
                   ]}
                 >
-                  <Text style={styles.chatBubbleText}>{msg.content}</Text>
+                  <Text style={[
+                    styles.chatBubbleText,
+                    msg.role === 'user' && styles.chatBubbleTextUser
+                  ]}>
+                    {msg.content}
+                  </Text>
                 </View>
               ))}
               {chatLoading && (
@@ -408,6 +420,13 @@ export default function KnowledgeScreen({ navigation }) {
               <Text style={styles.chatLimitText}>
                 {chatMessages.filter(m => m.role === 'user').length}/5 free messages today
               </Text>
+            )}
+            
+            {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
+              <UpgradePrompt
+                message="Enjoying AI Chat? Upgrade for unlimited conversations!"
+                feature="unlimited AI chat"
+              />
             )}
           </View>
         )}
@@ -450,10 +469,10 @@ export default function KnowledgeScreen({ navigation }) {
                 <Text style={styles.articleText}>{selectedArticle.content}</Text>
 
                 <View style={styles.keyTakeawaysSection}>
-                  <Text style={styles.sectionTitle}>📌 Key Takeaways</Text>
+                  <Text style={styles.sectionTitle}>💡 Key Takeaways</Text>
                   {selectedArticle.keyTakeaways.map((takeaway, index) => (
                     <View key={index} style={styles.takeawayItem}>
-                      <Text style={styles.takeawayBullet}>•</Text>
+                      <Text style={styles.takeawayBullet}>✓</Text>
                       <Text style={styles.takeawayText}>{takeaway}</Text>
                     </View>
                   ))}
@@ -801,6 +820,9 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     lineHeight: 22,
   },
+  chatBubbleTextUser: {
+    color: '#FFFFFF',
+  },
   chatInputContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -830,6 +852,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    marginBottom: 8,
   },
   floatingChatButton: {
     position: 'absolute',
