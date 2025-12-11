@@ -19,6 +19,13 @@
       "bundleIdentifier": "com.pawguard.app",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "PawGuard needs camera access to scan food items for safety checking.",
+        "NSPhotoLibraryUsageDescription": "PawGuard needs photo library access to select pet photos and food images.",
+        "NSPhotoLibraryAddUsageDescription": "PawGuard needs permission to save photos to your library.",
+        "NSLocationWhenInUseUsageDescription": "PawGuard needs your location to find nearby veterinary clinics in emergencies.",
+        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
       }
     },
     "android": {
@@ -30,7 +37,19 @@
       "versionCode": 1,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-2371616866592450~9934191141"
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "com.google.android.gms.permission.AD_ID"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -46,10 +65,29 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "PawGuard needs access to your photos to select pet images and food photos for safety checking.",
+          "cameraPermission": "PawGuard needs camera access to take photos of food items for safety analysis."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "PawGuard needs your location to find nearby veterinary clinics during pet emergencies.",
+          "locationAlwaysPermission": "PawGuard needs your location to send emergency alerts and find nearby vets.",
+          "locationWhenInUsePermission": "PawGuard needs your location to find nearby veterinary clinics when you need emergency help.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-2371616866592450~9934191141",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "userTrackingPermission": "This identifier will be used to deliver personalized ads to you."
         }
       ],
       [
