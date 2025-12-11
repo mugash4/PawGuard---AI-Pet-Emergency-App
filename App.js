@@ -6,6 +6,7 @@ import { UserProvider } from './src/context/UserContext';
 import { initializeFirebase } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
 import mobileAds from 'react-native-google-mobile-ads';
+import { requestNotificationPermissions } from './src/services/notificationService';
 
 // Keep splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -18,6 +19,8 @@ export default function App() {
       try {
         // Initialize Firebase
         initializeFirebase();
+
+        await requestNotificationPermissions();
 
         // Initialize Google Mobile Ads
         await mobileAds().initialize();

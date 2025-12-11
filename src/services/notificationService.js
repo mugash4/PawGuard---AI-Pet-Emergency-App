@@ -1,0 +1,333 @@
+/**
+ * Notification Service - Expo Notifications
+ * Handles vaccination reminders and health check alerts
+ * Free solution using Expo's notification system
+ */
+
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from './firebase';
+
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+/**
+ * Request notification permissions
+ */
+export const requestNotificationPermissions = async () => {
+  try {
+    if (!Device.isDevice) {
+      console.log('Notifications only work on physical devices');
+      return null;
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('Notification permission denied');
+      return null;
+    }
+
+    // Get push token (for future server notifications if needed)
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log('✅ Notification permission granted, token:', token);
+
+    // Configure notification channel for Android
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF8C61',
+      });
+
+      // Create specific channels
+      await Notifications.setNotificationChannelAsync('vaccination', {
+        name: 'Vaccination Reminders',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF8C61',
+      });
+
+      await Notifications.setNotificationChannelAsync('health', {
+        name: 'Health Alerts',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF8C61',
+      });
+    }
+
+    return token;
+  } catch (error) {
+    console.error('Error requesting notification permissions:', error);
+    return null;
+  }
+};
+
+/**
+ * Schedule vaccination reminder
+ * @param {Object} vaccination - { name, date, petName, petId }
+ */
+export const scheduleVaccinationReminder = async (vaccination) => {
+  try {
+    const vaccinationDate = new Date(vaccination.date);
+    const today = new Date();
+
+    // Schedule reminders at 7 days, 3 days, and 1 day before
+    const reminderDays = [7, 3, 1];
+    const scheduledNotifications = [];
+
+    for (const days of reminderDays) {
+      const reminderDate = new Date(vaccinationDate);
+      reminderDate.setDate(reminderDate.getDate() - days);
+
+      // Only schedule future reminders
+      if (reminderDate > today) {
+        const notificationId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `💉 Vaccination Reminder for ${vaccination.petName}`,
+            body: `${vaccination.name} is due in ${days} day${days > 1 ? 's' : ''}`,
+            data: { 
+              type: 'vaccination',
+              petId: vaccination.petId,
+              vaccinationName: vaccination.name
+            },
+            sound: true,
+            priority: Notifications.AndroidNotificationPriority.HIGH,
+            categoryIdentifier: 'vaccination',
+          },
+          trigger: {
+            date: reminderDate,
+            channelId: 'vaccination',
+          },
+        });
+
+        scheduledNotifications.push({
+          id: notificationId,
+          date: reminderDate.toISOString(),
+          daysBefor: days
+        });
+      }
+    }
+
+    // Save to Firestore
+    if (scheduledNotifications.length > 0) {
+      await setDoc(doc(db, 'notifications', `vaccination_${vaccination.petId}_${vaccination.name}`), {
+        type: 'vaccination',
+        petId: vaccination.petId,
+        petName: vaccination.petName,
+        vaccinationName: vaccination.name,
+        vaccinationDate: vaccination.date,
+        scheduledNotifications,
+        createdAt: new Date().toISOString()
+      });
+
+      console.log(`✅ Scheduled ${scheduledNotifications.length} reminders for ${vaccination.name}`);
+    }
+
+    return scheduledNotifications;
+  } catch (error) {
+    console.error('Error scheduling vaccination reminder:', error);
+    throw error;
+  }
+};
+
+/**
+ * Schedule health check reminder
+ * @param {Object} healthCheck - { type, frequency, petName, petId }
+ * frequency: 'monthly' | 'quarterly' | 'yearly'
+ */
+export const scheduleHealthCheckReminder = async (healthCheck) => {
+  try {
+    const today = new Date();
+    let nextDate = new Date(today);
+
+    // Calculate next check date based on frequency
+    switch (healthCheck.frequency) {
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      case 'quarterly':
+        nextDate.setMonth(nextDate.getMonth() + 3);
+        break;
+      case 'yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+        break;
+      default:
+        nextDate.setMonth(nextDate.getMonth() + 1);
+    }
+
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `🏥 Health Check Reminder for ${healthCheck.petName}`,
+        body: `Time for ${healthCheck.type} checkup`,
+        data: { 
+          type: 'healthCheck',
+          petId: healthCheck.petId,
+          checkType: healthCheck.type
+        },
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        categoryIdentifier: 'health',
+      },
+      trigger: {
+        date: nextDate,
+        channelId: 'health',
+        repeats: true, // Repeat based on frequency
+      },
+    });
+
+    // Save to Firestore
+    await setDoc(doc(db, 'notifications', `healthCheck_${healthCheck.petId}_${healthCheck.type}`), {
+      type: 'healthCheck',
+      petId: healthCheck.petId,
+      petName: healthCheck.petName,
+      checkType: healthCheck.type,
+      frequency: healthCheck.frequency,
+      nextDate: nextDate.toISOString(),
+      notificationId,
+      createdAt: new Date().toISOString()
+    });
+
+    console.log(`✅ Scheduled recurring health check reminder for ${healthCheck.type}`);
+    return notificationId;
+  } catch (error) {
+    console.error('Error scheduling health check reminder:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel vaccination reminder
+ */
+export const cancelVaccinationReminder = async (petId, vaccinationName) => {
+  try {
+    const notificationDoc = await getDoc(doc(db, 'notifications', `vaccination_${petId}_${vaccinationName}`));
+    
+    if (notificationDoc.exists()) {
+      const data = notificationDoc.data();
+      
+      // Cancel all scheduled notifications
+      for (const scheduled of data.scheduledNotifications) {
+        await Notifications.cancelScheduledNotificationAsync(scheduled.id);
+      }
+
+      console.log(`✅ Cancelled vaccination reminders for ${vaccinationName}`);
+    }
+  } catch (error) {
+    console.error('Error cancelling vaccination reminder:', error);
+  }
+};
+
+/**
+ * Cancel health check reminder
+ */
+export const cancelHealthCheckReminder = async (petId, checkType) => {
+  try {
+    const notificationDoc = await getDoc(doc(db, 'notifications', `healthCheck_${petId}_${checkType}`));
+    
+    if (notificationDoc.exists()) {
+      const data = notificationDoc.data();
+      await Notifications.cancelScheduledNotificationAsync(data.notificationId);
+      console.log(`✅ Cancelled health check reminder for ${checkType}`);
+    }
+  } catch (error) {
+    console.error('Error cancelling health check reminder:', error);
+  }
+};
+
+/**
+ * Get all scheduled notifications for a pet
+ */
+export const getPetNotifications = async (petId) => {
+  try {
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(notificationsRef, where('petId', '==', petId));
+    const querySnapshot = await getDocs(q);
+    
+    const notifications = [];
+    querySnapshot.forEach((doc) => {
+      notifications.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    return notifications;
+  } catch (error) {
+    console.error('Error getting pet notifications:', error);
+    return [];
+  }
+};
+
+/**
+ * Send immediate notification (local)
+ * For testing or immediate alerts
+ */
+export const sendImmediateNotification = async (title, body, data = {}) => {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data,
+        sound: true,
+      },
+      trigger: null, // Immediate
+    });
+    console.log('✅ Sent immediate notification');
+  } catch (error) {
+    console.error('Error sending immediate notification:', error);
+  }
+};
+
+/**
+ * Handle notification response (when user taps notification)
+ */
+export const setupNotificationResponseHandler = (navigation) => {
+  Notifications.addNotificationResponseReceivedListener(response => {
+    const data = response.notification.request.content.data;
+    
+    if (data.type === 'vaccination' || data.type === 'healthCheck') {
+      // Navigate to pet profile
+      navigation.navigate('PetProfile', { petId: data.petId });
+    }
+  });
+};
+
+/**
+ * Cancel all notifications for a pet
+ */
+export const cancelAllPetNotifications = async (petId) => {
+  try {
+    const notifications = await getPetNotifications(petId);
+    
+    for (const notification of notifications) {
+      if (notification.type === 'vaccination') {
+        for (const scheduled of notification.scheduledNotifications) {
+          await Notifications.cancelScheduledNotificationAsync(scheduled.id);
+        }
+      } else if (notification.type === 'healthCheck') {
+        await Notifications.cancelScheduledNotificationAsync(notification.notificationId);
+      }
+    }
+
+    console.log(`✅ Cancelled all notifications for pet ${petId}`);
+  } catch (error) {
+    console.error('Error cancelling all pet notifications:', error);
+  }
+};

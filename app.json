@@ -87,6 +87,7 @@
         {
           "androidAppId": "ca-app-pub-2371616866592450~9934191141",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": false,
           "userTrackingPermission": "This identifier will be used to deliver personalized ads to you."
         }
       ],
