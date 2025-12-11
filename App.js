@@ -17,18 +17,30 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Initialize Firebase
-        initializeFirebase();
+        // Initialize Firebase FIRST and wait for it to complete
+        await initializeFirebase();
+        console.log('✅ Firebase initialized');
 
-        await requestNotificationPermissions();
+        // Request notification permissions (with error handling)
+        try {
+          await requestNotificationPermissions();
+          console.log('✅ Notification permissions handled');
+        } catch (notifError) {
+          console.warn('⚠️ Notification permission error (non-critical):', notifError);
+        }
 
-        // Initialize Google Mobile Ads
-        await mobileAds().initialize();
+        // Initialize Google Mobile Ads (with error handling)
+        try {
+          await mobileAds().initialize();
+          console.log('✅ Google Mobile Ads initialized');
+        } catch (adsError) {
+          console.warn('⚠️ Google Mobile Ads error (non-critical):', adsError);
+        }
 
         // Wait a bit for splash screen animation
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
-        console.warn('Initialization error:', e);
+        console.error('❌ Critical initialization error:', e);
       } finally {
         setAppIsReady(true);
       }
