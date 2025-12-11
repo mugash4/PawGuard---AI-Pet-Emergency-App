@@ -264,10 +264,12 @@ export default function FoodCheckerScreen({ navigation }) {
         {/* Upgrade Prompt for Free Users */}
         {!user.isPremium && remaining !== null && remaining <= 1 && (
           <UpgradePrompt
+            navigation={navigation}
             message="Running low on free AI checks! Upgrade for unlimited access!"
             feature="unlimited food safety checks"
           />
         )}
+
 
         {/* Common Foods Quick Reference */}
         {!result && (

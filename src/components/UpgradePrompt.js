@@ -1,18 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 
-export default function UpgradePrompt({ message, feature }) {
-  const navigation = useNavigation();
+export default function UpgradePrompt({ message, feature, navigation }) {
   const { user } = useUser();
 
   // Don't show for premium users
   if (user?.isPremium) {
     return null;
   }
+
+  // Handle navigation safely
+  const handleUpgradePress = () => {
+    if (navigation && navigation.navigate) {
+      navigation.navigate('Subscription');
+    } else {
+      console.warn('Navigation not available in UpgradePrompt');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -42,7 +49,7 @@ export default function UpgradePrompt({ message, feature }) {
         </View>
         <TouchableOpacity
           style={styles.upgradeButton}
-          onPress={() => navigation.navigate('Subscription')}
+          onPress={handleUpgradePress}
         >
           <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
           <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />

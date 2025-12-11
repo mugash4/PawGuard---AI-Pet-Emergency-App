@@ -424,10 +424,12 @@ export default function KnowledgeScreen({ navigation }) {
             
             {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
               <UpgradePrompt
+                navigation={navigation}
                 message="Enjoying AI Chat? Upgrade for unlimited conversations!"
                 feature="unlimited AI chat"
               />
             )}
+
           </View>
         )}
       </ScrollView>
