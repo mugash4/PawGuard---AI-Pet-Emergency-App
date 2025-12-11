@@ -17,20 +17,20 @@ const PLANS = [
   {
     id: 'monthly',
     name: 'Monthly',
-    price: '$3.99',
+    price: '$4.99',
     period: '/month',
     description: 'Cancel anytime',
-    priceValue: 3.99,
+    priceValue: 4.99,
   },
   {
     id: 'yearly',
     name: 'Yearly',
-    price: '$9.99',
+    price: '$39.99',
     period: '/year',
-    description: 'SAVE 79% → $0.83/month',
-    badge: 'Best Choice - Save 75%',
+    description: 'SAVE 33% → $3.33/month',
+    badge: 'Best Choice - Save 33%',
     recommended: true,
-    priceValue: 9.99,
+    priceValue: 39.99,
   },
 ];
 

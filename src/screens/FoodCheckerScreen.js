@@ -18,6 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserContext } from '../context/UserContext';
 import { checkFoodSafety, checkQueryLimit, trackQueryUsage } from '../services/aiService';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import AdBanner from '../components/AdBanner';
+import UpgradePrompt from '../components/UpgradePrompt';
 
 export default function FoodCheckerScreen({ navigation }) {
   const { user } = useContext(UserContext);
@@ -204,6 +206,15 @@ export default function FoodCheckerScreen({ navigation }) {
             </View>
           </View>
         )}
+
+        {/* Upgrade Prompt for Free Users */}
+        {!user.isPremium && (
+          <UpgradePrompt
+            message="You've used your daily free AI food checks. Upgrade for unlimited access!"
+            feature="unlimited food safety checks"
+          />
+        )}
+
 
         {/* Common Foods Quick Reference */}
         {!result && (

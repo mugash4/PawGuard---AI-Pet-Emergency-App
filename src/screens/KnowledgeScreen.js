@@ -22,6 +22,7 @@ import { getKnowledgeArticles, getQuizQuestions } from '../services/contentServi
 import { chatWithAI, checkQueryLimit, trackQueryUsage } from '../services/aiService';
 import AdBanner from '../components/AdBanner';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
+import UpgradePrompt from '../components/UpgradePrompt';
 
 export default function KnowledgeScreen({ navigation }) {
   const { user } = useUser();
@@ -120,6 +121,14 @@ export default function KnowledgeScreen({ navigation }) {
       alert('Daily AI query limit reached. Upgrade to Premium for unlimited queries!');
       return;
     }
+
+    {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
+      <UpgradePrompt
+        message="Enjoying AI Chat? Upgrade for unlimited conversations!"
+        feature="unlimited AI chat"
+      />
+    )}
+
 
     const userMessage = { role: 'user', content: chatInput.trim() };
     setChatMessages([...chatMessages, userMessage]);
