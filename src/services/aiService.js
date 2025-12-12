@@ -5,7 +5,7 @@
  */
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, waitForAuth } from './firebase';
 
 /**
  * Call AI with automatic LLM selection
@@ -15,6 +15,9 @@ import { db } from './firebase';
  */
 export const callAI = async (message, context = 'user') => {
   try {
+    // ✅ WAIT for authentication to complete
+    await waitForAuth();
+    
     // Get API keys from Firebase (set by admin)
     const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
     
@@ -203,6 +206,9 @@ If the situation seems serious or life-threatening, immediately advise contactin
 Keep responses brief (2-4 sentences) unless more detail is specifically requested.`;
 
   try {
+    // ✅ WAIT for authentication to complete
+    await waitForAuth();
+    
     // Build conversation context
     const messages = [
       { role: 'system', content: systemPrompt }
@@ -336,6 +342,9 @@ export const checkQueryLimit = async (userId, isPremium) => {
   }
 
   try {
+    // ✅ WAIT for authentication to complete
+    await waitForAuth();
+    
     // Check daily limit (5 queries for free users)
     const today = new Date().toISOString().split('T')[0];
     const queryDoc = await getDoc(doc(db, 'aiQueries', `${userId}_${today}`));
@@ -359,6 +368,9 @@ export const checkQueryLimit = async (userId, isPremium) => {
  */
 export const trackQueryUsage = async (userId) => {
   try {
+    // ✅ WAIT for authentication to complete
+    await waitForAuth();
+    
     const today = new Date().toISOString().split('T')[0];
     const queryRef = doc(db, 'aiQueries', `${userId}_${today}`);
     const queryDoc = await getDoc(queryRef);
