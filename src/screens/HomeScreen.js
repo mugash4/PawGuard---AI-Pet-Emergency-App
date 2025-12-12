@@ -55,6 +55,9 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
+        {/* AdMob Banner at Bottom (only for free users) */}
+        <AdBanner />
+
         {/* Quick Actions - FIXED: 2 per row */}
         <Text style={styles.sectionTitle}>Emergency First Aid</Text>
         <View style={styles.quickActions}>
@@ -168,11 +171,20 @@ export default function HomeScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
 
+        {/* AdMob Banner */}
+        {!user.isPremium && <AdBanner />}
+
+        {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
+          <UpgradePrompt
+            navigation={navigation}
+            message="Upgrade for unlimited access!"
+            feature="unlimited AI Assistant, Ads Free & More "
+          />
+        )}
+
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
 
-      {/* AdMob Banner at Bottom (only for free users) */}
-      <AdBanner />
     </SafeAreaView>
   );
 }

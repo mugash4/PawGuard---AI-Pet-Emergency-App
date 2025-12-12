@@ -416,16 +416,18 @@ export default function KnowledgeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            
-            {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
-              <UpgradePrompt
-                navigation={navigation}
-                message="Enjoying AI Chat? Upgrade for unlimited conversations!"
-                feature="unlimited AI chat"
-              />
-            )}
-
           </View>
+        )}
+
+        {/* AdMob Banner */}
+        {!user.isPremium && <AdBanner />}
+
+        {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
+          <UpgradePrompt
+            navigation={navigation}
+            message="Enjoying AI Chat? Upgrade for unlimited conversations!"
+            feature="unlimited AI chat"
+          />
         )}
       </ScrollView>
 
@@ -438,9 +440,6 @@ export default function KnowledgeScreen({ navigation }) {
           <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
-
-      {/* AdMob Banner */}
-      <AdBanner />
 
       {/* Article Modal */}
       <Modal
@@ -474,6 +473,8 @@ export default function KnowledgeScreen({ navigation }) {
                     </View>
                   ))}
                 </View>
+                {/* AdMob Banner */}
+                {!user.isPremium && <AdBanner />}
               </ScrollView>
             </>
           )}

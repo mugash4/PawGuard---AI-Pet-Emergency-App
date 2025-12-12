@@ -321,10 +321,10 @@ export default function FoodCheckerScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
+        {/* AdMob Banner */}
+        {!user.isPremium && <AdBanner />}
       </ScrollView>
 
-      {/* AdMob Banner */}
-      {!user.isPremium && <AdBanner />}
     </SafeAreaView>
   );
 }

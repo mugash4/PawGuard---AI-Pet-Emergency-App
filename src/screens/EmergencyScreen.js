@@ -284,11 +284,15 @@ export default function EmergencyScreen({ navigation, route }) {
                     ⚠️ This is emergency guidance only. Always contact your veterinarian or emergency vet clinic immediately for any serious condition.
                   </Text>
                 </View>
+                {/* AdMob Banner */}
+                {!user.isPremium && <AdBanner />}
               </ScrollView>
             </>
           )}
         </SafeAreaView>
       </Modal>
+
+      
     </SafeAreaView>
   );
 }
