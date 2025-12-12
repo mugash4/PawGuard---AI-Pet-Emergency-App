@@ -1,3 +1,9 @@
+/**
+ * Pet Profile Screen - COMPLETE IMPLEMENTATION
+ * Fixed: German to English, Added vet finder, emergency contact features
+ * All features from PfotenDoc + Emergency help integration
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,15 +17,18 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useUser } from '../context/UserContext';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import AdBanner from '../components/AdBanner';
-import { savePetProfile, getPetProfile, deletePetProfile } from '../services/storageService';
+import { savePetProfile, getPetProfile } from '../services/storageService';
+import { scheduleVaccinationReminder, scheduleHealthCheckReminder } from '../services/notificationService';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 
 export default function PetProfileScreen({ navigation }) {
@@ -28,7 +37,8 @@ export default function PetProfileScreen({ navigation }) {
 
   const [pets, setPets] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState('info'); // 'info' | 'appointments' | 'documents'
+  const [activeTab, setActiveTab] = useState('info'); // 'info' | 'vaccinations' | 'documents'
+  const [selectedPet, setSelectedPet] = useState(null);
   
   // Form state
   const [editingPet, setEditingPet] = useState(null);
@@ -44,6 +54,13 @@ export default function PetProfileScreen({ navigation }) {
   const [vetName, setVetName] = useState('');
   const [vetPhone, setVetPhone] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // Vaccination state
+  const [vaccinations, setVaccinations] = useState([]);
+  const [vaccinationModalVisible, setVaccinationModalVisible] = useState(false);
+  const [vaccinationName, setVaccinationName] = useState('');
+  const [vaccinationDate, setVaccinationDate] = useState(new Date());
+  const [showVaccinationDatePicker, setShowVaccinationDatePicker] = useState(false);
 
   useEffect(() => {
     loadPetProfiles();
@@ -97,6 +114,7 @@ export default function PetProfileScreen({ navigation }) {
     setVetName(pet.vetName || '');
     setVetPhone(pet.vetPhone || '');
     setNotes(pet.notes || '');
+    setVaccinations(pet.vaccinations || []);
     setModalVisible(true);
   };
 
@@ -112,6 +130,7 @@ export default function PetProfileScreen({ navigation }) {
     setVetName('');
     setVetPhone('');
     setNotes('');
+    setVaccinations([]);
   };
 
   const savePet = async () => {
@@ -133,6 +152,7 @@ export default function PetProfileScreen({ navigation }) {
       vetName: vetName.trim(),
       vetPhone: vetPhone.trim(),
       notes: notes.trim(),
+      vaccinations,
       createdAt: editingPet ? editingPet.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -179,6 +199,103 @@ export default function PetProfileScreen({ navigation }) {
     );
   };
 
+  const addVaccination = async () => {
+    if (!vaccinationName.trim()) {
+      Alert.alert('Name Required', 'Please enter vaccination name.');
+      return;
+    }
+
+    const newVaccination = {
+      id: Date.now().toString(),
+      name: vaccinationName.trim(),
+      date: vaccinationDate.toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedVaccinations = [...vaccinations, newVaccination];
+    setVaccinations(updatedVaccinations);
+
+    // Schedule reminder notification
+    try {
+      await scheduleVaccinationReminder({
+        name: vaccinationName.trim(),
+        date: vaccinationDate.toISOString(),
+        petName: petName || 'Your pet',
+        petId: editingPet?.id || 'new',
+      });
+    } catch (error) {
+      console.error('Error scheduling reminder:', error);
+    }
+
+    setVaccinationName('');
+    setVaccinationDate(new Date());
+    setVaccinationModalVisible(false);
+    Alert.alert('Success', 'Vaccination added and reminder scheduled!');
+  };
+
+  const findNearbyVets = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location permission to find nearby veterinary clinics.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+
+      Alert.alert('Finding Vets', 'Getting your location...');
+      
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      // Open Google Maps with nearby vet search
+      const url = Platform.select({
+        ios: `maps://maps.google.com/maps?q=veterinary+clinic&center=${latitude},${longitude}`,
+        android: `geo:${latitude},${longitude}?q=veterinary+clinic`,
+      });
+
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to web browser
+        const webUrl = `https://www.google.com/maps/search/veterinary+clinic/@${latitude},${longitude},15z`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      console.error('Error finding vets:', error);
+      Alert.alert('Error', 'Could not find nearby vets. Please try again.');
+    }
+  };
+
+  const callEmergencyVet = (phoneNumber) => {
+    if (!phoneNumber) {
+      Alert.alert('No Phone Number', 'Please add your vet\'s phone number in pet profile.');
+      return;
+    }
+
+    Alert.alert(
+      'Call Emergency Vet',
+      `Call ${phoneNumber}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Call Now',
+          onPress: () => {
+            const url = `tel:${phoneNumber}`;
+            Linking.openURL(url);
+          },
+        },
+      ]
+    );
+  };
+
   const calculateAge = (birthDate) => {
     const birth = new Date(birthDate);
     const today = new Date();
@@ -204,14 +321,35 @@ export default function PetProfileScreen({ navigation }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>🐾 Tierausweis</Text>
-          <Text style={styles.subtitle}>My Pet Profiles</Text>
+          <Text style={styles.title}>🐾 Pet Profile</Text>
+          <Text style={styles.subtitle}>Manage Your Pet Information</Text>
+        </View>
+
+        {/* Emergency Actions */}
+        <View style={styles.emergencySection}>
+          <Text style={styles.emergencySectionTitle}>🚨 Emergency Help</Text>
+          <View style={styles.emergencyButtons}>
+            <TouchableOpacity
+              style={styles.emergencyButton}
+              onPress={findNearbyVets}
+            >
+              <Ionicons name="location" size={24} color="#FFFFFF" />
+              <Text style={styles.emergencyButtonText}>Find Nearby Vets</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.emergencyButton, styles.emergencyButtonSecondary]}
+              onPress={() => navigation.navigate('Emergency')}
+            >
+              <Ionicons name="medical" size={24} color="#FFFFFF" />
+              <Text style={styles.emergencyButtonText}>First Aid Guide</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Add Pet Button */}
         <TouchableOpacity style={styles.addButton} onPress={openAddPetModal}>
           <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>+ Profil anlegen</Text>
+          <Text style={styles.addButtonText}>+ Add Pet Profile</Text>
         </TouchableOpacity>
 
         {/* Pet List */}
@@ -220,9 +358,9 @@ export default function PetProfileScreen({ navigation }) {
             <View style={styles.emptyIconContainer}>
               <Ionicons name="paw" size={60} color={COLORS.primary} />
             </View>
-            <Text style={styles.emptyTitle}>Noch kein Profil hinterlegt</Text>
+            <Text style={styles.emptyTitle}>No Profiles Yet</Text>
             <Text style={styles.emptyText}>
-              Lege die wichtigsten Daten deines Hundes an, um den Tierausweis zu vervollständigen.
+              Create your pet's profile to store important health information, vaccination records, and emergency contacts.
             </Text>
           </View>
         ) : (
@@ -231,7 +369,10 @@ export default function PetProfileScreen({ navigation }) {
               {/* Pet Header */}
               <TouchableOpacity
                 style={styles.petHeader}
-                onPress={() => openEditPetModal(pet)}
+                onPress={() => {
+                  setSelectedPet(pet);
+                  setActiveTab('info');
+                }}
               >
                 <View style={styles.petPhotoContainer}>
                   {pet.photo ? (
@@ -246,7 +387,7 @@ export default function PetProfileScreen({ navigation }) {
                   <Text style={styles.petName}>{pet.name}</Text>
                   {pet.breed && <Text style={styles.petBreed}>{pet.breed}</Text>}
                   <Text style={styles.petAge}>
-                    {calculateAge(pet.birthDate)} • {pet.gender === 'male' ? '♂' : '♀'}
+                    {calculateAge(pet.birthDate)} • {pet.gender === 'male' ? '♂ Male' : '♀ Female'}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -261,29 +402,57 @@ export default function PetProfileScreen({ navigation }) {
               <View style={styles.petDetails}>
                 {pet.furColor && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Fellfarbe:</Text>
+                    <Text style={styles.detailLabel}>Fur Color:</Text>
                     <Text style={styles.detailValue}>{pet.furColor}</Text>
                   </View>
                 )}
                 {pet.weight && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Gewicht:</Text>
+                    <Text style={styles.detailLabel}>Weight:</Text>
                     <Text style={styles.detailValue}>{pet.weight} kg</Text>
                   </View>
                 )}
                 {pet.microchipNumber && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Chip-Nr:</Text>
+                    <Text style={styles.detailLabel}>Microchip:</Text>
                     <Text style={styles.detailValue}>{pet.microchipNumber}</Text>
                   </View>
                 )}
                 {pet.vetName && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Tierarzt:</Text>
+                    <Text style={styles.detailLabel}>Veterinarian:</Text>
                     <Text style={styles.detailValue}>{pet.vetName}</Text>
                   </View>
                 )}
               </View>
+
+              {/* Emergency Contact */}
+              {pet.vetPhone && (
+                <TouchableOpacity
+                  style={styles.vetCallButton}
+                  onPress={() => callEmergencyVet(pet.vetPhone)}
+                >
+                  <Ionicons name="call" size={20} color="#FFFFFF" />
+                  <Text style={styles.vetCallButtonText}>Call Vet: {pet.vetPhone}</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Vaccinations Preview */}
+              {pet.vaccinations && pet.vaccinations.length > 0 && (
+                <View style={styles.vaccinationsPreview}>
+                  <Text style={styles.vaccinationsTitle}>
+                    💉 Vaccinations ({pet.vaccinations.length})
+                  </Text>
+                  {pet.vaccinations.slice(0, 2).map((vac) => (
+                    <View key={vac.id} style={styles.vaccinationItem}>
+                      <Text style={styles.vaccinationName}>{vac.name}</Text>
+                      <Text style={styles.vaccinationDate}>
+                        {new Date(vac.date).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               {/* Actions */}
               <View style={styles.petActions}>
@@ -292,7 +461,7 @@ export default function PetProfileScreen({ navigation }) {
                   onPress={() => openEditPetModal(pet)}
                 >
                   <Ionicons name="create-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.actionButtonText}>Bearbeiten</Text>
+                  <Text style={styles.actionButtonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.deleteButton]}
@@ -300,7 +469,7 @@ export default function PetProfileScreen({ navigation }) {
                 >
                   <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                   <Text style={[styles.actionButtonText, { color: '#FF3B30' }]}>
-                    Löschen
+                    Delete
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -312,14 +481,13 @@ export default function PetProfileScreen({ navigation }) {
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={24} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            Store all your pet's important information in one place. Add vaccination records, 
-            vet appointments, and important documents.
+            Store all your pet's important information in one place. Find nearby vets, schedule vaccination reminders, and access emergency help instantly.
           </Text>
         </View>
       </ScrollView>
 
-      {/* AdMob Banner */}
-      <AdBanner />
+      {/* AdMob Banner at Bottom (only for free users) */}
+      {!user.isPremium && <AdBanner />}
 
       {/* Add/Edit Pet Modal */}
       <Modal
@@ -335,7 +503,7 @@ export default function PetProfileScreen({ navigation }) {
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingPet ? 'Tierprofil bearbeiten' : 'Tierprofil bearbeiten'}
+                {editingPet ? 'Edit Pet Profile' : 'Add Pet Profile'}
               </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
@@ -345,168 +513,229 @@ export default function PetProfileScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalContent}>
-              {/* Photo Picker */}
-              <TouchableOpacity style={styles.photoPicker} onPress={pickImage}>
-                {petPhoto ? (
-                  <Image source={{ uri: petPhoto }} style={styles.photoPreview} />
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    <Ionicons name="camera" size={32} color={COLORS.textLight} />
-                    <Text style={styles.photoPlaceholderText}>Foto hinzufügen</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              {/* Name */}
-              <Text style={styles.inputLabel}>Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Name *"
-                value={petName}
-                onChangeText={setPetName}
-              />
-
-              {/* Breed */}
-              <Text style={styles.inputLabel}>Rasse</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Rasse"
-                value={breed}
-                onChangeText={setBreed}
-              />
-
-              {/* Birth Date */}
-              <Text style={styles.inputLabel}>Geburtsdatum wählen</Text>
+            {/* Tabs */}
+            <View style={styles.tabs}>
               <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
+                style={[styles.tab, activeTab === 'info' && styles.tabActive]}
+                onPress={() => setActiveTab('info')}
               >
-                <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.dateButtonText}>
-                  {birthDate.toLocaleDateString('de-DE')}
+                <Text style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}>
+                  Info
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'vaccinations' && styles.tabActive]}
+                onPress={() => setActiveTab('vaccinations')}
+              >
+                <Text style={[styles.tabText, activeTab === 'vaccinations' && styles.tabTextActive]}>
+                  Vaccinations
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-              {showDatePicker && (
-                <DateTimePicker
-                  value={birthDate}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) setBirthDate(selectedDate);
-                  }}
-                  maximumDate={new Date()}
-                />
+            <ScrollView style={styles.modalContent}>
+              {activeTab === 'info' && (
+                <>
+                  {/* Photo Picker */}
+                  <TouchableOpacity style={styles.photoPicker} onPress={pickImage}>
+                    {petPhoto ? (
+                      <Image source={{ uri: petPhoto }} style={styles.photoPreview} />
+                    ) : (
+                      <View style={styles.photoPlaceholder}>
+                        <Ionicons name="camera" size={32} color={COLORS.textLight} />
+                        <Text style={styles.photoPlaceholderText}>Add Photo</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Name */}
+                  <Text style={styles.inputLabel}>Name *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pet name"
+                    value={petName}
+                    onChangeText={setPetName}
+                  />
+
+                  {/* Breed */}
+                  <Text style={styles.inputLabel}>Breed</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Golden Retriever"
+                    value={breed}
+                    onChangeText={setBreed}
+                  />
+
+                  {/* Birth Date */}
+                  <Text style={styles.inputLabel}>Birth Date</Text>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.dateButtonText}>
+                      {birthDate.toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={birthDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowDatePicker(Platform.OS === 'ios');
+                        if (selectedDate) setBirthDate(selectedDate);
+                      }}
+                      maximumDate={new Date()}
+                    />
+                  )}
+
+                  {/* Gender */}
+                  <Text style={styles.inputLabel}>Gender</Text>
+                  <View style={styles.genderContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderButton,
+                        gender === 'male' && styles.genderButtonActive,
+                      ]}
+                      onPress={() => setGender('male')}
+                    >
+                      <Ionicons
+                        name="male"
+                        size={20}
+                        color={gender === 'male' ? '#FFFFFF' : COLORS.text}
+                      />
+                      <Text
+                        style={[
+                          styles.genderButtonText,
+                          gender === 'male' && styles.genderButtonTextActive,
+                        ]}
+                      >
+                        Male
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderButton,
+                        gender === 'female' && styles.genderButtonActive,
+                      ]}
+                      onPress={() => setGender('female')}
+                    >
+                      <Ionicons
+                        name="female"
+                        size={20}
+                        color={gender === 'female' ? '#FFFFFF' : COLORS.text}
+                      />
+                      <Text
+                        style={[
+                          styles.genderButtonText,
+                          gender === 'female' && styles.genderButtonTextActive,
+                        ]}
+                      >
+                        Female
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Fur Color */}
+                  <Text style={styles.inputLabel}>Fur Color</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Brown, Black, White"
+                    value={furColor}
+                    onChangeText={setFurColor}
+                  />
+
+                  {/* Weight */}
+                  <Text style={styles.inputLabel}>Weight (kg)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., 25"
+                    value={weight}
+                    onChangeText={setWeight}
+                    keyboardType="decimal-pad"
+                  />
+
+                  {/* Microchip Number */}
+                  <Text style={styles.inputLabel}>Microchip Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="15-digit number"
+                    value={microchipNumber}
+                    onChangeText={setMicrochipNumber}
+                  />
+
+                  {/* Vet Info */}
+                  <Text style={styles.sectionTitle}>Emergency Vet Contact</Text>
+                  
+                  <Text style={styles.inputLabel}>Veterinarian Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Dr. Smith"
+                    value={vetName}
+                    onChangeText={setVetName}
+                  />
+
+                  <Text style={styles.inputLabel}>Vet Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="+1234567890"
+                    value={vetPhone}
+                    onChangeText={setVetPhone}
+                    keyboardType="phone-pad"
+                  />
+
+                  {/* Notes */}
+                  <Text style={styles.inputLabel}>Medical Notes</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Allergies, medications, special notes..."
+                    value={notes}
+                    onChangeText={setNotes}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                </>
               )}
 
-              {/* Gender */}
-              <Text style={styles.inputLabel}>Geschlecht</Text>
-              <View style={styles.genderContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.genderButton,
-                    gender === 'male' && styles.genderButtonActive,
-                  ]}
-                  onPress={() => setGender('male')}
-                >
-                  <Ionicons
-                    name="male"
-                    size={20}
-                    color={gender === 'male' ? '#FFFFFF' : COLORS.text}
-                  />
-                  <Text
-                    style={[
-                      styles.genderButtonText,
-                      gender === 'male' && styles.genderButtonTextActive,
-                    ]}
+              {activeTab === 'vaccinations' && (
+                <>
+                  <TouchableOpacity
+                    style={styles.addVaccinationButton}
+                    onPress={() => setVaccinationModalVisible(true)}
                   >
-                    Männlich
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.genderButton,
-                    gender === 'female' && styles.genderButtonActive,
-                  ]}
-                  onPress={() => setGender('female')}
-                >
-                  <Ionicons
-                    name="female"
-                    size={20}
-                    color={gender === 'female' ? '#FFFFFF' : COLORS.text}
-                  />
-                  <Text
-                    style={[
-                      styles.genderButtonText,
-                      gender === 'female' && styles.genderButtonTextActive,
-                    ]}
-                  >
-                    Weiblich
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.addVaccinationButtonText}>Add Vaccination</Text>
+                  </TouchableOpacity>
 
-              {/* Fur Color */}
-              <Text style={styles.inputLabel}>Fellfarbe</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Fellfarbe"
-                value={furColor}
-                onChangeText={setFurColor}
-              />
-
-              {/* Weight */}
-              <Text style={styles.inputLabel}>Gewicht (kg)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Gewicht (kg)"
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="decimal-pad"
-              />
-
-              {/* Microchip Number */}
-              <Text style={styles.inputLabel}>Chip-Nummer</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Chip-Nummer"
-                value={microchipNumber}
-                onChangeText={setMicrochipNumber}
-              />
-
-              {/* Vet Info */}
-              <Text style={styles.sectionTitle}>Tierarzt Informationen</Text>
-              
-              <Text style={styles.inputLabel}>Tierarzt Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Tierarzt Name"
-                value={vetName}
-                onChangeText={setVetName}
-              />
-
-              <Text style={styles.inputLabel}>Tierarzt Telefon</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Tierarzt Telefon"
-                value={vetPhone}
-                onChangeText={setVetPhone}
-                keyboardType="phone-pad"
-              />
-
-              {/* Notes */}
-              <Text style={styles.inputLabel}>Notizen</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Allergien, Medikamente, besondere Hinweise..."
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
+                  {vaccinations.length === 0 ? (
+                    <View style={styles.emptyVaccinations}>
+                      <Ionicons name="medical-outline" size={48} color={COLORS.textLight} />
+                      <Text style={styles.emptyVaccinationsText}>No vaccinations added yet</Text>
+                    </View>
+                  ) : (
+                    vaccinations.map((vac) => (
+                      <View key={vac.id} style={styles.vaccinationCard}>
+                        <View>
+                          <Text style={styles.vaccinationCardName}>{vac.name}</Text>
+                          <Text style={styles.vaccinationCardDate}>
+                            {new Date(vac.date).toLocaleDateString()}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setVaccinations(vaccinations.filter(v => v.id !== vac.id));
+                          }}
+                        >
+                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </>
+              )}
 
               {/* Action Buttons */}
               <View style={styles.modalActions}>
@@ -514,10 +743,10 @@ export default function PetProfileScreen({ navigation }) {
                   style={styles.cancelButton}
                   onPress={() => setModalVisible(false)}
                 >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.saveButton} onPress={savePet}>
-                  <Text style={styles.saveButtonText}>Speichern</Text>
+                  <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
               </View>
 
@@ -525,6 +754,66 @@ export default function PetProfileScreen({ navigation }) {
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Vaccination Modal */}
+      <Modal
+        visible={vaccinationModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setVaccinationModalVisible(false)}
+      >
+        <View style={styles.vaccinationModalOverlay}>
+          <View style={styles.vaccinationModalContent}>
+            <Text style={styles.vaccinationModalTitle}>Add Vaccination</Text>
+            
+            <Text style={styles.inputLabel}>Vaccination Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Rabies, Distemper"
+              value={vaccinationName}
+              onChangeText={setVaccinationName}
+            />
+
+            <Text style={styles.inputLabel}>Date</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowVaccinationDatePicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.dateButtonText}>
+                {vaccinationDate.toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+
+            {showVaccinationDatePicker && (
+              <DateTimePicker
+                value={vaccinationDate}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowVaccinationDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) setVaccinationDate(selectedDate);
+                }}
+              />
+            )}
+
+            <View style={styles.vaccinationModalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setVaccinationModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={addVaccination}
+              >
+                <Text style={styles.saveButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -548,6 +837,43 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
+  },
+  emergencySection: {
+    backgroundColor: '#FFF3F3',
+    marginHorizontal: SPACING.xl,
+    marginVertical: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#FFD6D6',
+  },
+  emergencySectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  emergencyButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  emergencyButton: {
+    flex: 1,
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: BORDER_RADIUS.md,
+    gap: 6,
+  },
+  emergencyButtonSecondary: {
+    backgroundColor: COLORS.primary,
+  },
+  emergencyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
   addButton: {
     flexDirection: 'row',
@@ -667,6 +993,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
   },
+  vetCallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    padding: 12,
+    borderRadius: BORDER_RADIUS.md,
+    gap: 8,
+  },
+  vetCallButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  vaccinationsPreview: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.md,
+  },
+  vaccinationsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  vaccinationItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  vaccinationName: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  vaccinationDate: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
   petActions: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -726,6 +1094,29 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: SPACING.lg,
     padding: 4,
+  },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 3,
+    borderBottomColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: COLORS.primary,
   },
   modalContent: {
     flex: 1,
@@ -825,6 +1216,51 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
   },
+  addVaccinationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    padding: 12,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: 16,
+    gap: 8,
+  },
+  addVaccinationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyVaccinations: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyVaccinationsText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 12,
+  },
+  vaccinationCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  vaccinationCardName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  vaccinationCardDate: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
@@ -855,5 +1291,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
+  },
+  vaccinationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  vaccinationModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  vaccinationModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  vaccinationModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
   },
 });

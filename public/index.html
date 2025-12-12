@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawGuard - Privacy Policy & Terms of Service</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #FF8C61 0%, #FFB088 100%);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #FF8C61;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: white;
+            color: #FF8C61;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #FF8C61;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 140, 97, 0.3);
+        }
+
+        .nav-btn.active {
+            background: #FF8C61;
+            color: white;
+        }
+
+        .content {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        h2 {
+            color: #FF8C61;
+            margin: 30px 0 15px 0;
+            font-size: 1.8em;
+        }
+
+        h3 {
+            color: #333;
+            margin: 20px 0 10px 0;
+            font-size: 1.3em;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .highlight {
+            background: #FFF3E0;
+            padding: 20px;
+            border-left: 4px solid #FF8C61;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .last-updated {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: white;
+            margin-top: 40px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            nav {
+                flex-direction: column;
+            }
+
+            .nav-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐾 PawGuard</h1>
+            <p class="tagline">AI-Powered Pet Emergency Assistant</p>
+        </header>
+
+        <nav>
+            <button class="nav-btn active" onclick="showSection('privacy')">Privacy Policy</button>
+            <button class="nav-btn" onclick="showSection('terms')">Terms of Service</button>
+            <button class="nav-btn" onclick="showSection('data')">Data Usage</button>
+            <button class="nav-btn" onclick="showSection('contact')">Contact Us</button>
+        </nav>
+
+        <!-- PRIVACY POLICY -->
+        <div id="privacy" class="content active">
+            <h2>Privacy Policy</h2>
+            <p class="last-updated">Last Updated: December 12, 2025</p>
+
+            <div class="highlight">
+                <strong>🔒 Your Privacy Matters</strong><br>
+                At PawGuard, we take your privacy seriously. This policy explains how we collect, use, and protect your personal information.
+            </div>
+
+            <h3>1. Information We Collect</h3>
+            <p>We collect information to provide better services to all our users. Here's what we collect:</p>
+
+            <h4>1.1 Information You Provide</h4>
+            <ul>
+                <li><strong>Pet Profile Information:</strong> Pet name, breed, birth date, gender, photos, veterinary clinic details, vaccination records</li>
+                <li><strong>Account Information:</strong> Email address (if you create an account), subscription status</li>
+                <li><strong>User-Generated Content:</strong> Questions asked to AI assistant, food safety queries, notes about your pet</li>
+            </ul>
+
+            <h4>1.2 Automatically Collected Information</h4>
+            <ul>
+                <li><strong>Device Information:</strong> Device type, operating system, unique device identifiers</li>
+                <li><strong>Usage Data:</strong> App features used, screen views, session duration, crash reports</li>
+                <li><strong>Location Data:</strong> Approximate location (only when you use "Find Nearby Vets" feature) with your explicit permission</li>
+                <li><strong>Ad Data:</strong> Ad impressions, clicks (collected by Google AdMob for free users)</li>
+            </ul>
+
+            <h3>2. How We Use Your Information</h3>
+            <ul>
+                <li><strong>Provide Services:</strong> Store pet profiles, answer emergency questions, check food safety</li>
+                <li><strong>AI Features:</strong> Process your questions using AI (DeepSeek/OpenAI API) to provide emergency guidance</li>
+                <li><strong>Emergency Features:</strong> Use location data to find nearby veterinary clinics when you request it</li>
+                <li><strong>Improve App:</strong> Analyze usage patterns to make the app better and fix bugs</li>
+                <li><strong>Notifications:</strong> Send vaccination reminders and health alerts (if you enable them)</li>
+                <li><strong>Advertising:</strong> Show relevant ads to free users (via Google AdMob)</li>
+                <li><strong>Payment Processing:</strong> Process premium subscriptions (via App Store/Google Play)</li>
+            </ul>
+
+            <h3>3. Data Storage & Security</h3>
+            <div class="highlight">
+                <strong>🔐 Security Measures:</strong><br>
+                • All data encrypted in transit (HTTPS/TLS)<br>
+                • Pet profiles stored securely in Firebase Cloud Firestore<br>
+                • Photos stored in Firebase Cloud Storage with access controls<br>
+                • API keys encrypted and never exposed to users<br>
+                • Regular security audits and updates
+            </div>
+
+            <h3>4. Data Sharing</h3>
+            <p><strong>We DO NOT sell your personal information.</strong> We only share data with:</p>
+            <ul>
+                <li><strong>AI Service Providers:</strong> DeepSeek/OpenAI (your questions are sent to AI API to generate answers, but no personal data like name/email is sent)</li>
+                <li><strong>Firebase/Google Cloud:</strong> For hosting, database, and analytics</li>
+                <li><strong>Google AdMob:</strong> For showing ads to free users</li>
+                <li><strong>App Stores:</strong> Apple/Google for payment processing</li>
+                <li><strong>Legal Requirements:</strong> If required by law, court order, or government request</li>
+            </ul>
+
+            <h3>5. Your Rights & Choices</h3>
+            <ul>
+                <li><strong>Access:</strong> View all your pet profiles and data anytime in the app</li>
+                <li><strong>Edit:</strong> Modify or update pet information at any time</li>
+                <li><strong>Delete:</strong> Delete pet profiles or your entire account</li>
+                <li><strong>Location:</strong> Control location permissions in device settings</li>
+                <li><strong>Notifications:</strong> Turn off push notifications in settings</li>
+                <li><strong>Ads:</strong> Upgrade to Premium to remove ads</li>
+                <li><strong>Data Export:</strong> Request a copy of your data by contacting support</li>
+            </ul>
+
+            <h3>6. Children's Privacy</h3>
+            <p>PawGuard is designed for pet owners of all ages. We do not knowingly collect personal information from children under 13 without parental consent. If you believe a child has provided us with personal information, please contact us.</p>
+
+            <h3>7. International Users</h3>
+            <p>If you use PawGuard from outside the United States, your information may be transferred to and stored in the US where our servers are located. By using the app, you consent to this transfer.</p>
+
+            <h3>8. Changes to This Policy</h3>
+            <p>We may update this Privacy Policy from time to time. We'll notify you of significant changes via app notification or email. Your continued use after changes means you accept the updated policy.</p>
+
+            <h3>9. Contact Us</h3>
+            <p>Questions about this Privacy Policy? Contact us at:</p>
+            <ul>
+                <li>Email: <strong>privacy@pawguard.app</strong></li>
+                <li>Website: <strong>www.pawguard.app</strong></li>
+            </ul>
+
+            <p class="last-updated">Effective Date: December 12, 2025</p>
+        </div>
+
+        <!-- TERMS OF SERVICE -->
+        <div id="terms" class="content">
+            <h2>Terms of Service</h2>
+            <p class="last-updated">Last Updated: December 12, 2025</p>
+
+            <div class="highlight">
+                <strong>⚖️ Agreement</strong><br>
+                By downloading or using PawGuard, you agree to these Terms of Service. Please read them carefully.
+            </div>
+
+            <h3>1. Acceptance of Terms</h3>
+            <p>These Terms of Service ("Terms") govern your access to and use of the PawGuard mobile application ("App"). By using PawGuard, you agree to be bound by these Terms. If you do not agree, do not use the App.</p>
+
+            <h3>2. Description of Service</h3>
+            <p>PawGuard provides:</p>
+            <ul>
+                <li><strong>Emergency First Aid Guidance:</strong> Step-by-step instructions for pet emergencies</li>
+                <li><strong>AI-Powered Assistant:</strong> AI chatbot for pet health questions</li>
+                <li><strong>Food Safety Checker:</strong> AI analysis of food safety for pets</li>
+                <li><strong>Pet Profile Management:</strong> Store pet information, photos, vaccination records</li>
+                <li><strong>Educational Content:</strong> Knowledge base, quizzes, daily tips</li>
+                <li><strong>Nearby Vet Finder:</strong> Location-based search for veterinary clinics</li>
+            </ul>
+
+            <h3>3. Important Medical Disclaimer</h3>
+            <div class="highlight">
+                <strong>⚠️ NOT A SUBSTITUTE FOR VETERINARY CARE</strong><br>
+                <br>
+                PawGuard is an INFORMATIONAL TOOL ONLY and does NOT provide veterinary medical advice, diagnosis, or treatment.
+                <br><br>
+                <strong>In a real emergency, always contact your veterinarian or emergency animal hospital immediately.</strong>
+                <br><br>
+                • AI responses are generated by computer algorithms and may contain errors<br>
+                • Food safety analysis is educational only, not medical advice<br>
+                • Emergency guides are general information, not specific to your pet<br>
+                • We are not responsible for any harm resulting from use of this app<br>
+                <br>
+                <strong>By using PawGuard, you acknowledge this is a reference tool, not a replacement for professional veterinary care.</strong>
+            </div>
+
+            <h3>4. User Responsibilities</h3>
+            <p>You agree to:</p>
+            <ul>
+                <li>Use PawGuard responsibly and only for pet care purposes</li>
+                <li>Provide accurate information about your pet</li>
+                <li>Not use the app to harm animals or violate laws</li>
+                <li>Not attempt to hack, reverse-engineer, or exploit the app</li>
+                <li>Not share your premium account with others</li>
+                <li>Seek professional veterinary care for serious health issues</li>
+            </ul>
+
+            <h3>5. Subscription & Payments</h3>
+            <h4>5.1 Free Plan</h4>
+            <ul>
+                <li>5 free AI queries per day</li>
+                <li>Access to basic emergency guides</li>
+                <li>Ad-supported experience</li>
+            </ul>
+
+            <h4>5.2 Premium Plans</h4>
+            <ul>
+                <li><strong>Monthly:</strong> $4.99/month</li>
+                <li><strong>Yearly:</strong> $39.99/year (save 33%)</li>
+                <li><strong>Lifetime:</strong> $79.99 one-time payment</li>
+            </ul>
+
+            <p><strong>Premium Benefits:</strong></p>
+            <ul>
+                <li>Unlimited AI queries</li>
+                <li>No ads</li>
+                <li>Priority support</li>
+                <li>Advanced features</li>
+            </ul>
+
+            <h4>5.3 Billing</h4>
+            <ul>
+                <li>Subscriptions are billed through App Store (iOS) or Google Play (Android)</li>
+                <li>Automatic renewal unless canceled at least 24 hours before renewal</li>
+                <li>Manage subscriptions in your device's account settings</li>
+                <li>No refunds for partial subscription periods</li>
+            </ul>
+
+            <h4>5.4 Free Trial</h4>
+            <ul>
+                <li>7-day free trial available for new users</li>
+                <li>Cancel anytime during trial to avoid charges</li>
+                <li>Automatically converts to paid subscription if not canceled</li>
+            </ul>
+
+            <h3>6. Intellectual Property</h3>
+            <p>All content in PawGuard (text, images, code, design) is owned by PawGuard or licensed to us. You may not:</p>
+            <ul>
+                <li>Copy or reproduce app content without permission</li>
+                <li>Use PawGuard name, logo, or branding</li>
+                <li>Create derivative works or competing products</li>
+                <li>Sell or redistribute app content</li>
+            </ul>
+
+            <h3>7. User Content</h3>
+            <p>When you submit content (pet photos, notes, questions), you:</p>
+            <ul>
+                <li>Retain ownership of your content</li>
+                <li>Grant us a license to store and process it to provide services</li>
+                <li>Confirm you have rights to upload the content</li>
+                <li>Agree we may use anonymized data to improve AI models</li>
+            </ul>
+
+            <h3>8. Prohibited Uses</h3>
+            <p>You may NOT use PawGuard to:</p>
+            <ul>
+                <li>Harm animals or promote animal cruelty</li>
+                <li>Violate any laws or regulations</li>
+                <li>Impersonate others or create fake accounts</li>
+                <li>Spam, harass, or abuse others</li>
+                <li>Upload malware, viruses, or harmful code</li>
+                <li>Scrape or collect data without permission</li>
+                <li>Interfere with app functionality</li>
+            </ul>
+
+            <h3>9. Limitation of Liability</h3>
+            <div class="highlight">
+                <strong>⚠️ IMPORTANT</strong><br>
+                <br>
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW:<br>
+                <br>
+                • PawGuard is provided "AS IS" without warranties<br>
+                • We are NOT liable for any damages from app use<br>
+                • We are NOT responsible for harm to pets resulting from app advice<br>
+                • Our total liability is limited to the amount you paid us (if any)<br>
+                • We do not guarantee AI accuracy or emergency guide completeness<br>
+            </div>
+
+            <h3>10. Termination</h3>
+            <p>We may suspend or terminate your access if you:</p>
+            <ul>
+                <li>Violate these Terms</li>
+                <li>Use the app illegally or harmfully</li>
+                <li>Abuse or harass others</li>
+                <li>Attempt to hack or exploit the service</li>
+            </ul>
+            <p>You may delete your account anytime from app settings.</p>
+
+            <h3>11. Changes to Terms</h3>
+            <p>We may modify these Terms at any time. We'll notify you of significant changes. Continued use means you accept the updated Terms.</p>
+
+            <h3>12. Governing Law</h3>
+            <p>These Terms are governed by the laws of [Your State/Country]. Any disputes will be resolved in courts located in [Your Jurisdiction].</p>
+
+            <h3>13. Contact Us</h3>
+            <p>Questions about these Terms? Contact us at:</p>
+            <ul>
+                <li>Email: <strong>support@pawguard.app</strong></li>
+                <li>Website: <strong>www.pawguard.app</strong></li>
+            </ul>
+
+            <p class="last-updated">Effective Date: December 12, 2025</p>
+        </div>
+
+        <!-- DATA USAGE -->
+        <div id="data" class="content">
+            <h2>Data Usage & AI Information</h2>
+
+            <div class="highlight">
+                <strong>🤖 How AI Works in PawGuard</strong><br>
+                Understanding what data is sent to AI and how it's used
+            </div>
+
+            <h3>What Data is Sent to AI?</h3>
+            <p>When you ask questions to the AI assistant or use the Food Safety Checker:</p>
+            <ul>
+                <li><strong>Your Question/Query:</strong> The text you type is sent to AI API (DeepSeek or OpenAI)</li>
+                <li><strong>Conversation Context:</strong> Previous messages in the same chat session (for continuity)</li>
+                <li><strong>NOT Sent:</strong> Your name, email, phone number, pet photos, or other personal data</li>
+            </ul>
+
+            <h3>AI Service Providers</h3>
+            <p>We use these AI providers:</p>
+            <ul>
+                <li><strong>DeepSeek AI:</strong> Primary AI for emergency questions and food safety</li>
+                <li><strong>OpenAI (ChatGPT):</strong> Alternative AI provider</li>
+            </ul>
+
+            <p>Both providers:</p>
+            <ul>
+                <li>Process your questions on their servers</li>
+                <li>May use data to improve their AI models (check their privacy policies)</li>
+                <li>Are bound by their own data protection policies</li>
+            </ul>
+
+            <h3>Location Data Usage</h3>
+            <p><strong>We only access your location when you explicitly request it:</strong></p>
+            <ul>
+                <li>Tap "Find Nearby Vets" button</li>
+                <li>Permission prompt appears (you can deny)</li>
+                <li>If granted, we get your approximate location</li>
+                <li>Location is used to open Maps app with nearby veterinary clinics</li>
+                <li>Location is NOT stored or sent to our servers</li>
+            </ul>
+
+            <h3>AdMob Data Collection</h3>
+            <p>For free users, Google AdMob collects:</p>
+            <ul>
+                <li>Device type, OS version</li>
+                <li>Ad impressions and clicks</li>
+                <li>Approximate location (for relevant ads)</li>
+                <li>Anonymous advertising ID</li>
+            </ul>
+            <p><strong>Premium users see NO ads and AdMob does not collect their data.</strong></p>
+
+            <h3>Data Retention</h3>
+            <ul>
+                <li><strong>Pet Profiles:</strong> Stored until you delete them</li>
+                <li><strong>AI Chat History:</strong> Stored locally on your device, optionally synced to cloud (if signed in)</li>
+                <li><strong>Usage Analytics:</strong> Retained for 90 days</li>
+                <li><strong>Crash Reports:</strong> Retained for 90 days</li>
+                <li><strong>Account Data:</strong> Deleted within 30 days after account deletion</li>
+            </ul>
+
+            <h3>Data Security</h3>
+            <ul>
+                <li>All data encrypted in transit (HTTPS/TLS)</li>
+                <li>Firebase security rules prevent unauthorized access</li>
+                <li>API keys encrypted server-side</li>
+                <li>Regular security audits</li>
+                <li>No data sold to third parties</li>
+            </ul>
+
+            <h3>Your Control</h3>
+            <p>You can:</p>
+            <ul>
+                <li><strong>Delete Pet Profiles:</strong> Tap "Delete" in pet profile screen</li>
+                <li><strong>Clear Chat History:</strong> Settings → Clear Chat Data</li>
+                <li><strong>Revoke Location Access:</strong> Device Settings → PawGuard → Location → Never</li>
+                <li><strong>Disable Notifications:</strong> Settings → Notifications → Off</li>
+                <li><strong>Delete Account:</strong> Settings → Account → Delete Account</li>
+            </ul>
+        </div>
+
+        <!-- CONTACT -->
+        <div id="contact" class="content">
+            <h2>Contact Us</h2>
+
+            <div class="highlight">
+                <strong>📧 Get in Touch</strong><br>
+                We're here to help! Contact us for any questions, concerns, or feedback.
+            </div>
+
+            <h3>Support</h3>
+            <p>For app issues, bugs, or questions:</p>
+            <ul>
+                <li>Email: <strong>support@pawguard.app</strong></li>
+                <li>Response Time: Within 24-48 hours</li>
+            </ul>
+
+            <h3>Privacy & Data Requests</h3>
+            <p>For privacy concerns, data deletion, or data export requests:</p>
+            <ul>
+                <li>Email: <strong>privacy@pawguard.app</strong></li>
+                <li>Subject Line: "Privacy Request - [Your Request]"</li>
+            </ul>
+
+            <h3>Business Inquiries</h3>
+            <p>For partnerships, media, or business inquiries:</p>
+            <ul>
+                <li>Email: <strong>business@pawguard.app</strong></li>
+            </ul>
+
+            <h3>Emergency Help</h3>
+            <p><strong>⚠️ If your pet is experiencing a medical emergency, DO NOT email us!</strong></p>
+            <p>Contact your veterinarian or emergency animal hospital immediately:</p>
+            <ul>
+                <li>ASPCA Poison Control: <strong>1-888-426-4435</strong> (US)</li>
+                <li>Pet Poison Helpline: <strong>1-855-764-7661</strong> (US/Canada)</li>
+                <li>Find your local emergency vet in the app: "Find Nearby Vets"</li>
+            </ul>
+
+            <h3>Social Media</h3>
+            <ul>
+                <li>Twitter: <strong>@PawGuardApp</strong></li>
+                <li>Instagram: <strong>@pawguard.app</strong></li>
+                <li>Facebook: <strong>/PawGuardApp</strong></li>
+            </ul>
+
+            <h3>Feedback & Suggestions</h3>
+            <p>We love hearing from pet parents! Share your ideas:</p>
+            <ul>
+                <li>Email: <strong>feedback@pawguard.app</strong></li>
+                <li>In-App: Settings → Send Feedback</li>
+            </ul>
+
+            <h3>Office Address</h3>
+            <p>
+                PawGuard Inc.<br>
+                [Your Address Line 1]<br>
+                [City, State, ZIP]<br>
+                [Country]
+            </p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 PawGuard Inc. All rights reserved.</p>
+        <p>
+            <a href="#privacy" onclick="showSection('privacy')">Privacy Policy</a> | 
+            <a href="#terms" onclick="showSection('terms')">Terms of Service</a> | 
+            <a href="#contact" onclick="showSection('contact')">Contact</a>
+        </p>
+    </footer>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all content sections
+            document.querySelectorAll('.content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active from all buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Activate button
+            event.target.classList.add('active');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
