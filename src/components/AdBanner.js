@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useUser } from '../context/UserContext';
 
@@ -52,6 +52,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#f5f5f5',
     paddingVertical: 8,
+    marginVertical: 16,
     width: '100%',
+    borderRadius: 8,
   },
 });

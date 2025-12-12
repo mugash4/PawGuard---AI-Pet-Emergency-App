@@ -21,8 +21,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 import { getEmergencyScenarios } from '../services/contentService';
 import AdBanner from '../components/AdBanner';
+import { useUser } from '../context/UserContext';
 
 export default function EmergencyScreen({ navigation, route }) {
+  const { user } = useUser();
   const [scenarios, setScenarios] = useState([]);
   const [filteredScenarios, setFilteredScenarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export default function EmergencyScreen({ navigation, route }) {
         <Text style={styles.subtitle}>{filteredScenarios.length} scenarios available</Text>
       </View>
 
-      {/* Search Bar - FIXED */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
         <TextInput
@@ -132,7 +134,7 @@ export default function EmergencyScreen({ navigation, route }) {
         )}
       </View>
 
-      {/* Category Filter - FIXED: Better spacing */}
+      {/* Category Filter */}
       <View style={styles.categoryWrapper}>
         <ScrollView 
           horizontal 
@@ -163,8 +165,11 @@ export default function EmergencyScreen({ navigation, route }) {
       {/* Emergency Scenarios List */}
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: 120 }} // Space for tab bar + ad banner
+        contentContainerStyle={{ paddingBottom: 100 }} // Space for tab bar
       >
+        {/* AdMob Banner - First Ad */}
+        {!user.isPremium && <AdBanner />}
+
         {filteredScenarios.map((scenario) => (
           <TouchableOpacity
             key={scenario.id}
@@ -202,6 +207,9 @@ export default function EmergencyScreen({ navigation, route }) {
           </TouchableOpacity>
         ))}
 
+        {/* AdMob Banner - Second Ad after scenarios */}
+        {!user.isPremium && filteredScenarios.length > 0 && <AdBanner />}
+
         {filteredScenarios.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🔍</Text>
@@ -210,9 +218,6 @@ export default function EmergencyScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
-
-      {/* AdMob Banner */}
-      <AdBanner />
 
       {/* Scenario Detail Modal */}
       <Modal
@@ -242,7 +247,7 @@ export default function EmergencyScreen({ navigation, route }) {
                 </View>
               </View>
 
-              <ScrollView style={styles.modalContent}>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: 40 }}>
                 {/* Symptoms */}
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>🔍 Symptoms</Text>
@@ -253,6 +258,9 @@ export default function EmergencyScreen({ navigation, route }) {
                     </View>
                   ))}
                 </View>
+
+                {/* AdMob Banner in modal */}
+                {!user.isPremium && <AdBanner />}
 
                 {/* Emergency Steps */}
                 <View style={styles.section}>
@@ -266,6 +274,9 @@ export default function EmergencyScreen({ navigation, route }) {
                     </View>
                   ))}
                 </View>
+
+                {/* AdMob Banner after steps */}
+                {!user.isPremium && <AdBanner />}
 
                 {/* Prevention Tips */}
                 <View style={styles.section}>
@@ -284,15 +295,11 @@ export default function EmergencyScreen({ navigation, route }) {
                     ⚠️ This is emergency guidance only. Always contact your veterinarian or emergency vet clinic immediately for any serious condition.
                   </Text>
                 </View>
-                {/* AdMob Banner */}
-                {!user.isPremium && <AdBanner />}
               </ScrollView>
             </>
           )}
         </SafeAreaView>
       </Modal>
-
-      
     </SafeAreaView>
   );
 }
@@ -343,12 +350,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 16,
   },
-  categoryContainer: {
+  categoryWrapper: {
     backgroundColor: '#FFFFFF',
-    paddingBottom: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   categoryContent: {
     paddingHorizontal: SPACING.lg,
+    gap: 8,
   },
   categoryButton: {
     paddingHorizontal: 16,
@@ -576,13 +584,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#856404',
     lineHeight: 20,
-  },
-    categoryWrapper: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: SPACING.sm,
-  },
-  categoryContent: {
-    paddingHorizontal: SPACING.lg,
-    gap: 8,
   },
 });

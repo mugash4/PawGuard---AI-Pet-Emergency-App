@@ -86,7 +86,7 @@ export default function FoodCheckerScreen({ navigation }) {
           'You\'ve used all 5 free AI queries today. Upgrade to Premium for unlimited queries!',
           [
             { text: 'Maybe Later', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: () => navigation.navigate('Subscription') }
+            { text: 'Upgrade Now', onPress: () => handleUpgradePress() }
           ]
         );
         return;
@@ -113,6 +113,11 @@ export default function FoodCheckerScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpgradePress = () => {
+    // Navigate to Main navigator first, then to Subscription screen
+    navigation.getParent()?.navigate('Subscription');
   };
 
   const getSafetyColor = (level) => {
@@ -147,7 +152,7 @@ export default function FoodCheckerScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>🍖 Food Safety Checker</Text>
@@ -162,6 +167,9 @@ export default function FoodCheckerScreen({ navigation }) {
             </View>
           )}
         </View>
+
+        {/* AdMob Banner - First Ad */}
+        {!user.isPremium && <AdBanner />}
 
         {/* Search Input */}
         <View style={styles.searchContainer}>
@@ -258,6 +266,9 @@ export default function FoodCheckerScreen({ navigation }) {
                 </Text>
               </View>
             </View>
+
+            {/* AdMob Banner after result */}
+            {!user.isPremium && <AdBanner />}
           </View>
         )}
 
@@ -269,7 +280,6 @@ export default function FoodCheckerScreen({ navigation }) {
             feature="unlimited food safety checks"
           />
         )}
-
 
         {/* Common Foods Quick Reference */}
         {!result && (
@@ -306,6 +316,9 @@ export default function FoodCheckerScreen({ navigation }) {
           </View>
         )}
 
+        {/* AdMob Banner before upgrade CTA */}
+        {!user.isPremium && <AdBanner />}
+
         {/* Upgrade CTA for free users */}
         {!user.isPremium && (
           <View style={styles.upgradeCTA}>
@@ -315,16 +328,13 @@ export default function FoodCheckerScreen({ navigation }) {
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => navigation.navigate('Subscription')}
+              onPress={handleUpgradePress}
             >
               <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
             </TouchableOpacity>
           </View>
         )}
-        {/* AdMob Banner */}
-        {!user.isPremium && <AdBanner />}
       </ScrollView>
-
     </SafeAreaView>
   );
 }
@@ -439,6 +449,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    marginBottom: 16,
   },
   resultHeader: {
     flexDirection: 'row',
