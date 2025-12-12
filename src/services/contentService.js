@@ -341,13 +341,76 @@ function getFallbackKnowledgeArticles() {
 function getFallbackQuizQuestions() {
   return [
     {
-      question: 'What should you do first in a dog emergency?',
-      options: ['Panic and rush', 'Stay calm and assess', 'Give water immediately', 'Call everyone you know'],
+      question: 'What should you do first when your dog is choking?',
+      options: [
+        'Pull their tongue out',
+        'Hit them on the back',
+        'Check if they can still breathe and look in their mouth',
+        'Give them water'
+      ],
+      correctAnswer: 2,
+      explanation: 'First, stay calm and check if your dog can still breathe. Look in their mouth for any visible objects before attempting removal.'
+    },
+    {
+      question: 'What is the normal heart rate range for adult dogs?',
+      options: ['30-50 bpm', '60-140 bpm', '150-200 bpm', '200-250 bpm'],
       correctAnswer: 1,
-      explanation: 'Staying calm helps you think clearly and prevents stressing your dog further.'
+      explanation: 'A normal resting heart rate for adult dogs is 60-140 beats per minute. Puppies have higher rates up to 180 bpm.'
+    },
+    {
+      question: 'Which food is TOXIC to dogs?',
+      options: ['Carrots', 'Apples', 'Grapes', 'Blueberries'],
+      correctAnswer: 2,
+      explanation: 'Grapes and raisins are toxic to dogs and can cause kidney failure, even in small amounts.'
+    },
+    {
+      question: 'What should you do if your dog has heatstroke?',
+      options: [
+        'Put them in ice-cold water',
+        'Give them cold water to drink immediately',
+        'Move to shade and cool with room-temperature water',
+        'Let them rest and they will recover'
+      ],
+      correctAnswer: 2,
+      explanation: 'Move to shade and apply cool (not ice-cold) water to their body. Offer small amounts of water and get to a vet immediately.'
+    },
+    {
+      question: 'How often should you check your dog for ticks?',
+      options: ['Once a month', 'Once a week', 'After every outdoor activity', 'Only if they scratch'],
+      correctAnswer: 2,
+      explanation: 'Check for ticks after every outdoor activity, especially in wooded or grassy areas. Early detection prevents disease transmission.'
+    },
+    {
+      question: 'What is the correct way to give CPR to a dog?',
+      options: [
+        'Same as humans - 30 compressions, 2 breaths',
+        '15 compressions, 1 breath',
+        'Only chest compressions, no breaths',
+        'Compressions are not needed'
+      ],
+      correctAnswer: 0,
+      explanation: 'Dog CPR follows similar principles to human CPR: 30 chest compressions followed by 2 rescue breaths.'
+    },
+    {
+      question: 'What should you do if your dog eats chocolate?',
+      options: [
+        'Wait and see if symptoms appear',
+        'Call vet/poison control immediately',
+        'Give them milk to neutralize it',
+        'Make them vomit at home'
+      ],
+      correctAnswer: 1,
+      explanation: 'Call your vet or poison control immediately. Do NOT induce vomiting unless instructed by a professional.'
+    },
+    {
+      question: 'How long can a dog safely stay in a hot car?',
+      options: ['10 minutes', '20 minutes with windows cracked', '30 minutes in shade', 'Never leave them in a hot car'],
+      correctAnswer: 3,
+      explanation: 'Never leave a dog in a hot car, even for a few minutes. Temperatures can rise to dangerous levels within 10 minutes.'
     }
   ];
 }
+
 
 function getFallbackDailyTip() {
   return {

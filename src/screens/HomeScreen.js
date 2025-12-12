@@ -12,6 +12,7 @@ import { useUser } from '../context/UserContext';
 import AdBanner from '../components/AdBanner';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
+import UpgradePrompt from '../components/UpgradePrompt';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useUser();
@@ -28,7 +29,7 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }} // Space for tab bar
+        contentContainerStyle={{ paddingBottom: SPACING.xl }}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -55,8 +56,8 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* AdMob Banner at Bottom (only for free users) */}
-        <AdBanner />
+        {/* AdMob Banner - Integrated in content */}
+        {!user?.isPremium && <AdBanner />}
 
         {/* Quick Actions - FIXED: 2 per row */}
         <Text style={styles.sectionTitle}>Emergency First Aid</Text>
@@ -123,6 +124,9 @@ export default function HomeScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
 
+        {/* AdMob Banner - Between content */}
+        {!user?.isPremium && <AdBanner />}
+
         <TouchableOpacity
           style={styles.featureCard}
           onPress={() => navigation.navigate('FoodChecker')}
@@ -171,20 +175,27 @@ export default function HomeScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
 
-        {/* AdMob Banner */}
-        {!user.isPremium && <AdBanner />}
+        {/* AdMob Banner - At bottom of content */}
+        {!user?.isPremium && <AdBanner />}
 
-        {!user?.isPremium && chatMessages.filter(m => m.role === 'user').length >= 3 && (
-          <UpgradePrompt
-            navigation={navigation}
-            message="Upgrade for unlimited access!"
-            feature="unlimited AI Assistant, Ads Free & More "
-          />
+        {/* Upgrade CTA for free users */}
+        {!user.isPremium && (
+          <View style={styles.upgradeCTA}>
+            <Text style={styles.upgradeTitle}>Want Unlimited Checks?</Text>
+            <Text style={styles.upgradeText}>
+              Upgrade to Premium for unlimited AI food safety checks, no ads, and more features!
+            </Text>
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              onPress={handleUpgradePress}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
-
     </SafeAreaView>
   );
 }
@@ -272,7 +283,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     marginTop: SPACING.md,
   },
-  // FIXED: 2 items per row layout
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -280,7 +290,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   quickActionCard: {
-    width: '48%', // Exactly 2 per row
+    width: '48%',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,

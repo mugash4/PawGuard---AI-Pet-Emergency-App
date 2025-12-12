@@ -116,8 +116,25 @@ export default function FoodCheckerScreen({ navigation }) {
   };
 
   const handleUpgradePress = () => {
-    // Navigate to Main navigator first, then to Subscription screen
-    navigation.getParent()?.navigate('Subscription');
+    try {
+      // Check if we have navigation
+      if (!navigation) {
+        Alert.alert('Error', 'Navigation not available');
+        return;
+      }
+    
+      // Get parent navigator and navigate to Subscription
+      const parentNav = navigation.getParent();
+      if (parentNav && parentNav.navigate) {
+        parentNav.navigate('Subscription');
+      } else {
+        // Fallback: try direct navigation
+        navigation.navigate('Subscription');
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Unable to open subscription screen. Please restart the app.');
+    }
   };
 
   const getSafetyColor = (level) => {
@@ -272,15 +289,6 @@ export default function FoodCheckerScreen({ navigation }) {
           </View>
         )}
 
-        {/* Upgrade Prompt for Free Users */}
-        {!user.isPremium && remaining !== null && remaining <= 1 && (
-          <UpgradePrompt
-            navigation={navigation}
-            message="Running low on free AI checks! Upgrade for unlimited access!"
-            feature="unlimited food safety checks"
-          />
-        )}
-
         {/* Common Foods Quick Reference */}
         {!result && (
           <View style={styles.quickRefContainer}>
@@ -335,6 +343,21 @@ export default function FoodCheckerScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      {/* Floating AI Chat Button */}
+      <TouchableOpacity
+        style={styles.floatingChatButton}
+        onPress={() => {
+          try {
+            navigation.navigate('AIChat');
+          } catch (error) {
+            console.error('Navigation error:', error);
+          }
+        }}
+      >
+      <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
+    </TouchableOpacity>
+
     </SafeAreaView>
   );
 }
@@ -605,4 +628,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  floatingChatButton: {
+  position: 'absolute',
+  right: 20,
+  bottom: 100,
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: COLORS.primary,
+  justifyContent: 'center',
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  elevation: 8,
+},
+
 });

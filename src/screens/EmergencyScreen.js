@@ -165,7 +165,7 @@ export default function EmergencyScreen({ navigation, route }) {
       {/* Emergency Scenarios List */}
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: 100 }} // Space for tab bar
+        contentContainerStyle={{ paddingBottom: SPACING.xl }} // Space for tab bar
       >
         {/* AdMob Banner - First Ad */}
         {!user.isPremium && <AdBanner />}
@@ -300,6 +300,14 @@ export default function EmergencyScreen({ navigation, route }) {
           )}
         </SafeAreaView>
       </Modal>
+      {/* Floating AI Chat Button */}
+      <TouchableOpacity
+        style={styles.floatingChatButton}
+        onPress={() => navigation.navigate('AIChat')}
+      >
+        <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
+
     </SafeAreaView>
   );
 }
@@ -585,4 +593,27 @@ const styles = StyleSheet.create({
     color: '#856404',
     lineHeight: 20,
   },
+  floatingChatButton: {
+  position: 'absolute',
+  right: 20,
+  bottom: 100, // Above tab bar
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: COLORS.primary,
+  justifyContent: 'center',
+  alignItems: 'center',
+  ...Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    android: {
+      elevation: 8,
+    },
+  }),
+},
+
 });
