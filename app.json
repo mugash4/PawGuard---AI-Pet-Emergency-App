@@ -39,16 +39,17 @@
         "googleMobileAdsAppId": "ca-app-pub-2371616866592450~9934191141"
       },
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE",
-        "com.google.android.gms.permission.AD_ID"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -109,9 +110,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "5a2b5500-757d-4cba-81f9-d1a5c6aac126"
+        "projectId": "40aefccf-e70e-40e6-a203-932c8c026aa4"
       }
     },
-    "owner": "stinemug"
+    "owner": "augustinemwathi8"
   }
 }
