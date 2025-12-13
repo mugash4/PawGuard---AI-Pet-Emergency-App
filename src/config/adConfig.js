@@ -28,7 +28,15 @@ const AD_UNIT_IDS = {
       : 'ca-app-pub-2371616866592450/7115073225', // TODO: Replace with your Android Interstitial Ad Unit ID
   },
 
-  
+  // REWARDED ADS (watch video to earn rewards)
+  rewarded: {
+    ios: __DEV__ 
+      ? TestIds.REWARDED 
+      : 'ca-app-pub-3940256099942544/1712485313', // TODO: Replace with your iOS Rewarded Ad Unit ID
+    android: __DEV__ 
+      ? TestIds.REWARDED 
+      : 'ca-app-pub-2371616866592450/5715744531', // TODO: Replace with your Android Rewarded Ad Unit ID
+  },
 };
 
 // Get the appropriate Ad Unit ID for the current platform

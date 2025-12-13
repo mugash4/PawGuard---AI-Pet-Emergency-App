@@ -1,4 +1,4 @@
-import { InterstitialAd, RewardedAd, AdEventType, RewardedAdEventType } from 'react-native-google-mobile-ads';
+import { InterstitialAd, RewardedAd, AdEventType, RewardedAdEventType, MobileAds } from 'react-native-google-mobile-ads';
 import { getAdUnitId, AD_FREQUENCY } from '../config/adConfig';
 
 class AdMobService {
@@ -9,19 +9,39 @@ class AdMobService {
     this.lastInterstitialTime = 0;
     this.isInterstitialLoaded = false;
     this.isRewardedLoaded = false;
+    this.isInitialized = false;
     
-    this.initializeAds();
+    // DON'T initialize ads in constructor - wait for explicit initialization
   }
 
-  // Initialize all ads
-  initializeAds() {
-    this.loadInterstitialAd();
-    this.loadRewardedAd();
+  // Must be called after MobileAds is initialized
+  async initialize() {
+    if (this.isInitialized) {
+      console.log('AdMobService already initialized');
+      return;
+    }
+
+    try {
+      // Wait for MobileAds to be ready
+      const adapterStatuses = await MobileAds().initialize();
+      console.log('✅ Google Mobile Ads initialized:', adapterStatuses);
+      
+      this.isInitialized = true;
+      this.loadInterstitialAd();
+      this.loadRewardedAd();
+    } catch (error) {
+      console.error('❌ Error initializing AdMobService:', error);
+    }
   }
 
   // ==================== INTERSTITIAL ADS ====================
   
   loadInterstitialAd() {
+    if (!this.isInitialized) {
+      console.log('⚠️ AdMobService not initialized yet, skipping interstitial load');
+      return;
+    }
+
     try {
       this.interstitialAd = InterstitialAd.createForAdRequest(
         getAdUnitId('interstitial'),
@@ -74,6 +94,11 @@ class AdMobService {
   }
 
   async showInterstitialAd() {
+    if (!this.isInitialized) {
+      console.log('⚠️ AdMobService not initialized yet');
+      return false;
+    }
+
     const currentTime = Date.now();
     const timeSinceLastAd = currentTime - this.lastInterstitialTime;
 
@@ -101,6 +126,10 @@ class AdMobService {
 
   // Track screen navigation and show ad when threshold reached
   trackScreenNavigation() {
+    if (!this.isInitialized) {
+      return false;
+    }
+
     this.screenNavigationCount++;
     console.log(`Screen navigation count: ${this.screenNavigationCount}`);
 
@@ -113,6 +142,11 @@ class AdMobService {
   // ==================== REWARDED ADS ====================
 
   loadRewardedAd() {
+    if (!this.isInitialized) {
+      console.log('⚠️ AdMobService not initialized yet, skipping rewarded load');
+      return;
+    }
+
     try {
       this.rewardedAd = RewardedAd.createForAdRequest(
         getAdUnitId('rewarded'),
@@ -175,6 +209,11 @@ class AdMobService {
   }
 
   async showRewardedAd(onRewardEarned) {
+    if (!this.isInitialized) {
+      console.log('⚠️ AdMobService not initialized yet');
+      return false;
+    }
+
     if (this.isRewardedLoaded && this.rewardedAd) {
       try {
         // Set up one-time reward listener
