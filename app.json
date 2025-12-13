@@ -107,7 +107,9 @@
             "deploymentTarget": "15.1"
           }
         }
-      ]
+      ],
+      "./app.plugin.js",
+      "react-native-iap"
     ],
     "extra": {
       "eas": {
