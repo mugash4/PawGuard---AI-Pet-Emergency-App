@@ -4,10 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { UserProvider } from './src/context/UserContext';
-import { initializeFirebase } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
-import adMobService from './src/services/adMobService';
-import { requestNotificationPermissions } from './src/services/notificationService';
 
 // Keep splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -21,37 +18,55 @@ export default function App() {
       try {
         console.log('🚀 Starting app initialization...');
 
-        // STEP 1: Initialize Firebase FIRST (most critical)
+        // CRITICAL FIX: Longer delay for native modules to be fully ready
+        // This fixes the React Native 0.76.5 + Expo 52 timing issues
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // STEP 1: Initialize Firebase (non-blocking, with timeout)
         try {
-          await initializeFirebase();
+          const firebasePromise = import('./src/services/firebase').then(module => module.initializeFirebase());
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Firebase timeout')), 8000)
+          );
+          
+          await Promise.race([firebasePromise, timeoutPromise]);
           console.log('✅ Firebase initialized successfully');
         } catch (firebaseError) {
-          console.error('⚠️ Firebase initialization error:', firebaseError);
+          console.warn('⚠️ Firebase initialization error (non-critical):', firebaseError.message);
           // Continue anyway - app can work without Firebase
         }
 
-        // STEP 2: Wait a bit for native modules to be ready
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // STEP 3: Initialize AdMob (with proper error handling)
+        // STEP 2: Initialize AdMob (with strict timeout and error handling)
         try {
-          await adMobService.initialize();
+          const adMobPromise = import('./src/services/adMobService').then(module => module.default.initialize());
+          const adTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('AdMob timeout')), 8000)
+          );
+          
+          await Promise.race([adMobPromise, adTimeoutPromise]);
           console.log('✅ AdMob service initialized successfully');
         } catch (adError) {
-          console.warn('⚠️ AdMob initialization error (non-critical):', adError);
+          console.warn('⚠️ AdMob initialization error (non-critical):', adError.message);
           // Continue - ads just won't work
         }
 
-        // STEP 4: Request notification permissions (optional, non-blocking)
+        // STEP 3: Request notification permissions (optional, non-blocking)
         try {
-          await requestNotificationPermissions();
+          const notifPromise = import('./src/services/notificationService').then(module => 
+            module.requestNotificationPermissions()
+          );
+          const notifTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Notification timeout')), 5000)
+          );
+          
+          await Promise.race([notifPromise, notifTimeoutPromise]);
           console.log('✅ Notification permissions handled');
         } catch (notifError) {
-          console.warn('⚠️ Notification permission error (non-critical):', notifError);
+          console.warn('⚠️ Notification permission error (non-critical):', notifError.message);
           // Continue - notifications just won't work
         }
 
-        // STEP 5: Small delay for splash screen animation
+        // STEP 4: Small delay for splash screen animation
         await new Promise(resolve => setTimeout(resolve, 500));
 
         console.log('✅ App initialization complete!');

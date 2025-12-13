@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { InterstitialAd, RewardedAd, AdEventType, RewardedAdEventType, MobileAds } from 'react-native-google-mobile-ads';
 import { getAdUnitId, AD_FREQUENCY } from '../config/adConfig';
 
@@ -11,12 +12,17 @@ class AdMobService {
     this.isRewardedLoaded = false;
     this.isInitialized = false;
     this.isInitializing = false;
+    this.initializationFailed = false;
   }
 
   async initialize() {
     // Prevent multiple simultaneous initialization attempts
     if (this.isInitializing) {
       console.log('⏳ AdMobService initialization already in progress...');
+      // Wait for the current initialization to complete
+      while (this.isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       return;
     }
 
@@ -25,31 +31,43 @@ class AdMobService {
       return;
     }
 
+    if (this.initializationFailed) {
+      console.log('⚠️ AdMobService initialization previously failed, skipping');
+      return;
+    }
+
     this.isInitializing = true;
 
     try {
-      // CRITICAL: Add timeout to prevent hanging
+      console.log('🚀 Starting AdMob initialization...');
+
+      // CRITICAL FIX: Strict timeout to prevent hanging
       const initPromise = MobileAds().initialize();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('AdMob initialization timeout')), 10000)
+        setTimeout(() => reject(new Error('AdMob initialization timeout after 8 seconds')), 8000)
       );
 
       const adapterStatuses = await Promise.race([initPromise, timeoutPromise]);
       
-      console.log('✅ Google Mobile Ads initialized:', JSON.stringify(adapterStatuses).substring(0, 100));
+      console.log('✅ Google Mobile Ads initialized successfully');
       
       this.isInitialized = true;
       
-      // Load ads in background (non-blocking)
+      // Load ads in background (non-blocking, with error handling)
       setTimeout(() => {
-        this.loadInterstitialAd();
-        this.loadRewardedAd();
-      }, 1000);
+        try {
+          this.loadInterstitialAd();
+          this.loadRewardedAd();
+        } catch (loadError) {
+          console.warn('⚠️ Error loading initial ads (non-critical):', loadError.message);
+        }
+      }, 2000);
 
     } catch (error) {
       console.error('❌ Error initializing AdMobService:', error.message);
+      this.initializationFailed = true;
       // Mark as initialized anyway to prevent retry loops
-      this.isInitialized = true;
+      this.isInitialized = false;
     } finally {
       this.isInitializing = false;
     }
@@ -82,7 +100,8 @@ class AdMobService {
         () => {
           console.log('Interstitial ad closed');
           this.isInterstitialLoaded = false;
-          this.loadInterstitialAd();
+          // Reload next ad
+          setTimeout(() => this.loadInterstitialAd(), 1000);
         }
       );
 
@@ -184,7 +203,8 @@ class AdMobService {
         () => {
           console.log('Rewarded ad closed');
           this.isRewardedLoaded = false;
-          this.loadRewardedAd();
+          // Reload next ad
+          setTimeout(() => this.loadRewardedAd(), 1000);
         }
       );
 

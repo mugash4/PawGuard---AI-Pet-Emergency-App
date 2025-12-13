@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -12,29 +12,25 @@ const firebaseConfig = {
   appId: "1:697373184312:web:af57ab587244f963a171cd"
 };
 
-// Initialize Firebase immediately
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// CRITICAL FIX: Check if Firebase is already initialized
+let app;
+let db;
+let auth;
+
+// Initialize Firebase only once
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+  console.log('🔥 Firebase app initialized');
+} else {
+  app = getApps()[0];
+  console.log('🔥 Firebase app already initialized');
+}
+
+db = getFirestore(app);
+auth = getAuth(app);
 
 let authReady = false;
 let authReadyPromise = null;
-
-// Auto sign-in anonymously for API access
-authReadyPromise = new Promise((resolve) => {
-  signInAnonymously(auth)
-    .then(() => {
-      console.log('✅ Firebase initialized with anonymous auth');
-      authReady = true;
-      resolve(true);
-    })
-    .catch((error) => {
-      console.error('⚠️ Firebase auth error (non-critical):', error);
-      // Still resolve to allow app to continue
-      authReady = true;
-      resolve(false);
-    });
-});
 
 // Helper function to ensure auth is ready before making Firestore calls
 export const waitForAuth = async () => {
@@ -46,10 +42,29 @@ export const waitForAuth = async () => {
 };
 
 export const initializeFirebase = async () => {
-  // Wait for auth to complete
-  await authReadyPromise;
-  console.log('✅ Firebase initialization complete');
-  return { app, db, auth };
+  // Prevent multiple simultaneous initialization attempts
+  if (authReadyPromise) {
+    console.log('⏳ Firebase auth already initializing...');
+    return await authReadyPromise;
+  }
+
+  // Auto sign-in anonymously for API access
+  authReadyPromise = new Promise((resolve) => {
+    signInAnonymously(auth)
+      .then(() => {
+        console.log('✅ Firebase initialized with anonymous auth');
+        authReady = true;
+        resolve({ app, db, auth });
+      })
+      .catch((error) => {
+        console.error('⚠️ Firebase auth error (non-critical):', error.message);
+        // Still resolve to allow app to continue
+        authReady = true;
+        resolve({ app, db, auth });
+      });
+  });
+
+  return await authReadyPromise;
 };
 
 // Export initialized instances (safe to import)

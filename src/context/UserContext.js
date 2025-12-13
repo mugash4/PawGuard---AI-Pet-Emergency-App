@@ -14,38 +14,74 @@ export function UserProvider({ children }) {
 
   const loadUser = async () => {
     try {
-      // Get or create device ID (anonymous user ID)
-      let deviceId = await AsyncStorage.getItem('deviceId');
-      if (!deviceId) {
-        deviceId = `${Device.osName}_${Device.modelName}_${Date.now()}`;
-        await AsyncStorage.setItem('deviceId', deviceId);
-      }
+      // CRITICAL FIX: Add timeout for AsyncStorage operations
+      const loadPromise = async () => {
+        // Get or create device ID (anonymous user ID)
+        let deviceId = await AsyncStorage.getItem('deviceId');
+        if (!deviceId) {
+          deviceId = `${Device.osName || 'Unknown'}_${Device.modelName || 'Device'}_${Date.now()}`;
+          await AsyncStorage.setItem('deviceId', deviceId);
+        }
 
-      // Load user data from AsyncStorage
-      const userData = await AsyncStorage.getItem('userData');
-      const parsedData = userData ? JSON.parse(userData) : {};
+        // Load user data from AsyncStorage
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedData = userData ? JSON.parse(userData) : {};
 
-      setUser({
-        id: deviceId,
-        userId: deviceId, // Add userId for backward compatibility
-        isPremium: parsedData.isPremium || false,
-        isAdmin: parsedData.isAdmin || false,
-        subscriptionType: parsedData.subscriptionType || 'free',
-        dailyAIUsage: parsedData.dailyAIUsage || {},
-        createdAt: parsedData.createdAt || new Date().toISOString(),
-        ...parsedData
-      });
+        return {
+          id: deviceId,
+          userId: deviceId, // Add userId for backward compatibility
+          isPremium: parsedData.isPremium || false,
+          isAdmin: parsedData.isAdmin || false,
+          subscriptionType: parsedData.subscriptionType || 'free',
+          dailyAIUsage: parsedData.dailyAIUsage || {},
+          createdAt: parsedData.createdAt || new Date().toISOString(),
+          ...parsedData
+        };
+      };
+
+      // Timeout after 5 seconds
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('User load timeout')), 5000)
+      );
+
+      const userData = await Promise.race([loadPromise(), timeoutPromise]);
+      setUser(userData);
     } catch (error) {
-      console.error('Error loading user:', error);
+      console.error('Error loading user:', error.message);
+      // Set default user to allow app to continue
+      const fallbackId = `Fallback_${Date.now()}`;
+      setUser({
+        id: fallbackId,
+        userId: fallbackId,
+        isPremium: false,
+        isAdmin: false,
+        subscriptionType: 'free',
+        dailyAIUsage: {},
+        createdAt: new Date().toISOString(),
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const updateUser = async (updates) => {
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+    try {
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      
+      // Save with timeout
+      const savePromise = AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Save timeout')), 3000)
+      );
+      
+      await Promise.race([savePromise, timeoutPromise]);
+    } catch (error) {
+      console.error('Error updating user:', error.message);
+      // Still update in-memory state
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+    }
   };
 
   const upgradeToPremium = async (subscriptionType) => {
@@ -65,7 +101,7 @@ export function UserProvider({ children }) {
 
   const incrementAIUsage = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const currentUsage = user.dailyAIUsage[today] || 0;
+    const currentUsage = user?.dailyAIUsage?.[today] || 0;
     await updateUser({
       dailyAIUsage: {
         ...user.dailyAIUsage,
