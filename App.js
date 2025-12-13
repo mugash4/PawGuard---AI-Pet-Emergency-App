@@ -5,7 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { UserProvider } from './src/context/UserContext';
 import { initializeFirebase } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
-import mobileAds from 'react-native-google-mobile-ads';
+// ❌ REMOVED: import mobileAds from 'react-native-google-mobile-ads';
+// The plugin handles initialization automatically!
 import { requestNotificationPermissions } from './src/services/notificationService';
 
 // Keep splash screen visible while we fetch resources
@@ -29,13 +30,11 @@ export default function App() {
           console.warn('⚠️ Notification permission error (non-critical):', notifError);
         }
 
-        // Initialize Google Mobile Ads (with error handling)
-        try {
-          await mobileAds().initialize();
-          console.log('✅ Google Mobile Ads initialized');
-        } catch (adsError) {
-          console.warn('⚠️ Google Mobile Ads error (non-critical):', adsError);
-        }
+        // ✅ FIX: Removed mobileAds().initialize() call
+        // Google Mobile Ads is automatically initialized by the plugin
+        // because delayAppMeasurementInit: false in app.json
+        // Double initialization was causing the crash!
+        console.log('✅ Google Mobile Ads will be initialized automatically by plugin');
 
         // Wait a bit for splash screen animation
         await new Promise(resolve => setTimeout(resolve, 1000));
