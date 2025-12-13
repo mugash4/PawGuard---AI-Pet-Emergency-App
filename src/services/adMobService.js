@@ -10,32 +10,51 @@ class AdMobService {
     this.isInterstitialLoaded = false;
     this.isRewardedLoaded = false;
     this.isInitialized = false;
-    
-    // DON'T initialize ads in constructor - wait for explicit initialization
+    this.isInitializing = false;
   }
 
-  // Must be called after MobileAds is initialized
   async initialize() {
-    if (this.isInitialized) {
-      console.log('AdMobService already initialized');
+    // Prevent multiple simultaneous initialization attempts
+    if (this.isInitializing) {
+      console.log('⏳ AdMobService initialization already in progress...');
       return;
     }
 
+    if (this.isInitialized) {
+      console.log('✅ AdMobService already initialized');
+      return;
+    }
+
+    this.isInitializing = true;
+
     try {
-      // Wait for MobileAds to be ready
-      const adapterStatuses = await MobileAds().initialize();
-      console.log('✅ Google Mobile Ads initialized:', adapterStatuses);
+      // CRITICAL: Add timeout to prevent hanging
+      const initPromise = MobileAds().initialize();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AdMob initialization timeout')), 10000)
+      );
+
+      const adapterStatuses = await Promise.race([initPromise, timeoutPromise]);
+      
+      console.log('✅ Google Mobile Ads initialized:', JSON.stringify(adapterStatuses).substring(0, 100));
       
       this.isInitialized = true;
-      this.loadInterstitialAd();
-      this.loadRewardedAd();
+      
+      // Load ads in background (non-blocking)
+      setTimeout(() => {
+        this.loadInterstitialAd();
+        this.loadRewardedAd();
+      }, 1000);
+
     } catch (error) {
-      console.error('❌ Error initializing AdMobService:', error);
+      console.error('❌ Error initializing AdMobService:', error.message);
+      // Mark as initialized anyway to prevent retry loops
+      this.isInitialized = true;
+    } finally {
+      this.isInitializing = false;
     }
   }
 
-  // ==================== INTERSTITIAL ADS ====================
-  
   loadInterstitialAd() {
     if (!this.isInitialized) {
       console.log('⚠️ AdMobService not initialized yet, skipping interstitial load');
@@ -50,46 +69,40 @@ class AdMobService {
         }
       );
 
-      // Event: Ad loaded successfully
       const unsubscribeLoaded = this.interstitialAd.addAdEventListener(
         AdEventType.LOADED,
         () => {
-          console.log('Interstitial ad loaded');
+          console.log('✅ Interstitial ad loaded');
           this.isInterstitialLoaded = true;
         }
       );
 
-      // Event: Ad closed by user
       const unsubscribeClosed = this.interstitialAd.addAdEventListener(
         AdEventType.CLOSED,
         () => {
           console.log('Interstitial ad closed');
           this.isInterstitialLoaded = false;
-          // Load next ad
           this.loadInterstitialAd();
         }
       );
 
-      // Event: Ad failed to load
       const unsubscribeError = this.interstitialAd.addAdEventListener(
         AdEventType.ERROR,
         (error) => {
-          console.log('Interstitial ad error:', error);
+          console.log('Interstitial ad error:', error.message);
           this.isInterstitialLoaded = false;
         }
       );
 
-      // Start loading the ad
       this.interstitialAd.load();
 
-      // Store unsubscribe functions
       this.interstitialUnsubscribe = () => {
         unsubscribeLoaded();
         unsubscribeClosed();
         unsubscribeError();
       };
     } catch (error) {
-      console.error('Error creating interstitial ad:', error);
+      console.error('Error creating interstitial ad:', error.message);
     }
   }
 
@@ -102,7 +115,6 @@ class AdMobService {
     const currentTime = Date.now();
     const timeSinceLastAd = currentTime - this.lastInterstitialTime;
 
-    // Check if enough time has passed since last ad
     if (timeSinceLastAd < AD_FREQUENCY.INTERSTITIAL_MIN_INTERVAL) {
       console.log('Too soon to show another interstitial ad');
       return false;
@@ -112,10 +124,10 @@ class AdMobService {
       try {
         await this.interstitialAd.show();
         this.lastInterstitialTime = currentTime;
-        this.screenNavigationCount = 0; // Reset counter
+        this.screenNavigationCount = 0;
         return true;
       } catch (error) {
-        console.error('Error showing interstitial ad:', error);
+        console.error('Error showing interstitial ad:', error.message);
         return false;
       }
     } else {
@@ -124,7 +136,6 @@ class AdMobService {
     }
   }
 
-  // Track screen navigation and show ad when threshold reached
   trackScreenNavigation() {
     if (!this.isInitialized) {
       return false;
@@ -138,8 +149,6 @@ class AdMobService {
     }
     return false;
   }
-
-  // ==================== REWARDED ADS ====================
 
   loadRewardedAd() {
     if (!this.isInitialized) {
@@ -155,48 +164,40 @@ class AdMobService {
         }
       );
 
-      // Event: Ad loaded successfully
       const unsubscribeLoaded = this.rewardedAd.addAdEventListener(
         RewardedAdEventType.LOADED,
         () => {
-          console.log('Rewarded ad loaded');
+          console.log('✅ Rewarded ad loaded');
           this.isRewardedLoaded = true;
         }
       );
 
-      // Event: User earned reward
       const unsubscribeEarned = this.rewardedAd.addAdEventListener(
         RewardedAdEventType.EARNED_REWARD,
         (reward) => {
           console.log('User earned reward:', reward);
-          // Reward will be handled in the callback when showing the ad
         }
       );
 
-      // Event: Ad closed by user
       const unsubscribeClosed = this.rewardedAd.addAdEventListener(
         AdEventType.CLOSED,
         () => {
           console.log('Rewarded ad closed');
           this.isRewardedLoaded = false;
-          // Load next ad
           this.loadRewardedAd();
         }
       );
 
-      // Event: Ad failed to load
       const unsubscribeError = this.rewardedAd.addAdEventListener(
         AdEventType.ERROR,
         (error) => {
-          console.log('Rewarded ad error:', error);
+          console.log('Rewarded ad error:', error.message);
           this.isRewardedLoaded = false;
         }
       );
 
-      // Start loading the ad
       this.rewardedAd.load();
 
-      // Store unsubscribe functions
       this.rewardedUnsubscribe = () => {
         unsubscribeLoaded();
         unsubscribeEarned();
@@ -204,7 +205,7 @@ class AdMobService {
         unsubscribeError();
       };
     } catch (error) {
-      console.error('Error creating rewarded ad:', error);
+      console.error('Error creating rewarded ad:', error.message);
     }
   }
 
@@ -216,7 +217,6 @@ class AdMobService {
 
     if (this.isRewardedLoaded && this.rewardedAd) {
       try {
-        // Set up one-time reward listener
         const unsubscribe = this.rewardedAd.addAdEventListener(
           RewardedAdEventType.EARNED_REWARD,
           (reward) => {
@@ -231,7 +231,7 @@ class AdMobService {
         await this.rewardedAd.show();
         return true;
       } catch (error) {
-        console.error('Error showing rewarded ad:', error);
+        console.error('Error showing rewarded ad:', error.message);
         return false;
       }
     } else {
@@ -244,8 +244,6 @@ class AdMobService {
     return this.isRewardedLoaded;
   }
 
-  // ==================== CLEANUP ====================
-
   destroy() {
     if (this.interstitialUnsubscribe) {
       this.interstitialUnsubscribe();
@@ -256,5 +254,4 @@ class AdMobService {
   }
 }
 
-// Export singleton instance
 export default new AdMobService();

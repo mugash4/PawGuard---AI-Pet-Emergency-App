@@ -12,40 +12,29 @@ const firebaseConfig = {
   appId: "1:697373184312:web:af57ab587244f963a171cd"
 };
 
-let app;
-let db;
-let auth;
+// Initialize Firebase immediately
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
 let authReady = false;
 let authReadyPromise = null;
 
-export const initializeFirebase = async () => {
-  if (!app) {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-    
-    // Create a promise that resolves when auth is ready
-    authReadyPromise = new Promise((resolve) => {
-      // Auto sign-in anonymously for API access
-      signInAnonymously(auth)
-        .then(() => {
-          console.log('✅ Firebase initialized with anonymous auth');
-          authReady = true;
-          resolve(true);
-        })
-        .catch((error) => {
-          console.error('Firebase auth error:', error);
-          // Still resolve to allow app to continue
-          authReady = true;
-          resolve(false);
-        });
+// Auto sign-in anonymously for API access
+authReadyPromise = new Promise((resolve) => {
+  signInAnonymously(auth)
+    .then(() => {
+      console.log('✅ Firebase initialized with anonymous auth');
+      authReady = true;
+      resolve(true);
+    })
+    .catch((error) => {
+      console.error('⚠️ Firebase auth error (non-critical):', error);
+      // Still resolve to allow app to continue
+      authReady = true;
+      resolve(false);
     });
-    
-    // Wait for auth to be ready
-    await authReadyPromise;
-  }
-  return { app, db, auth };
-};
+});
 
 // Helper function to ensure auth is ready before making Firestore calls
 export const waitForAuth = async () => {
@@ -56,4 +45,12 @@ export const waitForAuth = async () => {
   return false;
 };
 
+export const initializeFirebase = async () => {
+  // Wait for auth to complete
+  await authReadyPromise;
+  console.log('✅ Firebase initialization complete');
+  return { app, db, auth };
+};
+
+// Export initialized instances (safe to import)
 export { app, db, auth };

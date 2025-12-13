@@ -18,6 +18,11 @@ export const callAI = async (message, context = 'user') => {
     // ✅ WAIT for authentication to complete
     await waitForAuth();
     
+    // Ensure db is available
+    if (!db) {
+      throw new Error('Firebase not initialized properly');
+    }
+    
     // Get API keys from Firebase (set by admin)
     const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
     
@@ -209,6 +214,11 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
     // ✅ WAIT for authentication to complete
     await waitForAuth();
     
+    // Ensure db is available
+    if (!db) {
+      throw new Error('Firebase not initialized properly');
+    }
+    
     // Build conversation context
     const messages = [
       { role: 'system', content: systemPrompt }
@@ -345,6 +355,12 @@ export const checkQueryLimit = async (userId, isPremium) => {
     // ✅ WAIT for authentication to complete
     await waitForAuth();
     
+    // Ensure db is available
+    if (!db) {
+      console.warn('Firebase not initialized, allowing query');
+      return { allowed: true, remaining: 5 };
+    }
+    
     // Check daily limit (5 queries for free users)
     const today = new Date().toISOString().split('T')[0];
     const queryDoc = await getDoc(doc(db, 'aiQueries', `${userId}_${today}`));
@@ -370,6 +386,12 @@ export const trackQueryUsage = async (userId) => {
   try {
     // ✅ WAIT for authentication to complete
     await waitForAuth();
+    
+    // Ensure db is available
+    if (!db) {
+      console.warn('Firebase not initialized, skipping usage tracking');
+      return;
+    }
     
     const today = new Date().toISOString().split('T')[0];
     const queryRef = doc(db, 'aiQueries', `${userId}_${today}`);

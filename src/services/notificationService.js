@@ -1,13 +1,11 @@
 /**
  * Notification Service - Expo Notifications
  * Handles vaccination reminders and health check alerts
- * Free solution using Expo's notification system
  */
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -19,17 +17,30 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Get Firestore instance safely
+ * Get Firestore instance safely (dynamic import to avoid timing issues)
  */
 const getFirestoreInstance = () => {
   try {
-    const { db } = require('./firebase');
-    if (!db) {
-      throw new Error('Firestore not initialized');
+    const firebase = require('./firebase');
+    if (!firebase || !firebase.db) {
+      console.warn('⚠️ Firestore not initialized yet');
+      return null;
     }
-    return db;
+    return firebase.db;
   } catch (error) {
-    console.error('Error getting Firestore instance:', error);
+    console.error('❌ Error getting Firestore instance:', error);
+    return null;
+  }
+};
+
+/**
+ * Get Firestore functions (lazy import)
+ */
+const getFirestoreFunctions = () => {
+  try {
+    return require('firebase/firestore');
+  } catch (error) {
+    console.error('❌ Error importing Firestore functions:', error);
     return null;
   }
 };
@@ -57,7 +68,7 @@ export const requestNotificationPermissions = async () => {
       return null;
     }
 
-    // Get push token (for future server notifications if needed)
+    // Get push token
     const token = (await Notifications.getExpoPushTokenAsync()).data;
     console.log('✅ Notification permission granted, token:', token);
 
@@ -70,7 +81,6 @@ export const requestNotificationPermissions = async () => {
         lightColor: '#FF8C61',
       });
 
-      // Create specific channels
       await Notifications.setNotificationChannelAsync('vaccination', {
         name: 'Vaccination Reminders',
         importance: Notifications.AndroidImportance.HIGH,
@@ -95,19 +105,18 @@ export const requestNotificationPermissions = async () => {
 
 /**
  * Schedule vaccination reminder
- * @param {Object} vaccination - { name, date, petName, petId }
  */
 export const scheduleVaccinationReminder = async (vaccination) => {
   try {
     const db = getFirestoreInstance();
-    if (!db) {
-      throw new Error('Firestore not available');
+    const firestoreFunctions = getFirestoreFunctions();
+    
+    if (!db || !firestoreFunctions) {
+      console.warn('⚠️ Firestore not available, skipping database save');
     }
 
     const vaccinationDate = new Date(vaccination.date);
     const today = new Date();
-
-    // Schedule reminders at 7 days, 3 days, and 1 day before
     const reminderDays = [7, 3, 1];
     const scheduledNotifications = [];
 
@@ -115,7 +124,6 @@ export const scheduleVaccinationReminder = async (vaccination) => {
       const reminderDate = new Date(vaccinationDate);
       reminderDate.setDate(reminderDate.getDate() - days);
 
-      // Only schedule future reminders
       if (reminderDate > today) {
         const notificationId = await Notifications.scheduleNotificationAsync({
           content: {
@@ -144,8 +152,9 @@ export const scheduleVaccinationReminder = async (vaccination) => {
       }
     }
 
-    // Save to Firestore
-    if (scheduledNotifications.length > 0) {
+    // Save to Firestore if available
+    if (db && firestoreFunctions && scheduledNotifications.length > 0) {
+      const { doc, setDoc } = firestoreFunctions;
       await setDoc(doc(db, 'notifications', `vaccination_${vaccination.petId}_${vaccination.name}`), {
         type: 'vaccination',
         petId: vaccination.petId,
@@ -155,10 +164,9 @@ export const scheduleVaccinationReminder = async (vaccination) => {
         scheduledNotifications,
         createdAt: new Date().toISOString()
       });
-
-      console.log(`✅ Scheduled ${scheduledNotifications.length} reminders for ${vaccination.name}`);
     }
 
+    console.log(`✅ Scheduled ${scheduledNotifications.length} reminders for ${vaccination.name}`);
     return scheduledNotifications;
   } catch (error) {
     console.error('Error scheduling vaccination reminder:', error);
@@ -168,20 +176,15 @@ export const scheduleVaccinationReminder = async (vaccination) => {
 
 /**
  * Schedule health check reminder
- * @param {Object} healthCheck - { type, frequency, petName, petId }
- * frequency: 'monthly' | 'quarterly' | 'yearly'
  */
 export const scheduleHealthCheckReminder = async (healthCheck) => {
   try {
     const db = getFirestoreInstance();
-    if (!db) {
-      throw new Error('Firestore not available');
-    }
+    const firestoreFunctions = getFirestoreFunctions();
 
     const today = new Date();
     let nextDate = new Date(today);
 
-    // Calculate next check date based on frequency
     switch (healthCheck.frequency) {
       case 'monthly':
         nextDate.setMonth(nextDate.getMonth() + 1);
@@ -212,21 +215,24 @@ export const scheduleHealthCheckReminder = async (healthCheck) => {
       trigger: {
         date: nextDate,
         channelId: 'health',
-        repeats: true, // Repeat based on frequency
+        repeats: true,
       },
     });
 
-    // Save to Firestore
-    await setDoc(doc(db, 'notifications', `healthCheck_${healthCheck.petId}_${healthCheck.type}`), {
-      type: 'healthCheck',
-      petId: healthCheck.petId,
-      petName: healthCheck.petName,
-      checkType: healthCheck.type,
-      frequency: healthCheck.frequency,
-      nextDate: nextDate.toISOString(),
-      notificationId,
-      createdAt: new Date().toISOString()
-    });
+    // Save to Firestore if available
+    if (db && firestoreFunctions) {
+      const { doc, setDoc } = firestoreFunctions;
+      await setDoc(doc(db, 'notifications', `healthCheck_${healthCheck.petId}_${healthCheck.type}`), {
+        type: 'healthCheck',
+        petId: healthCheck.petId,
+        petName: healthCheck.petName,
+        checkType: healthCheck.type,
+        frequency: healthCheck.frequency,
+        nextDate: nextDate.toISOString(),
+        notificationId,
+        createdAt: new Date().toISOString()
+      });
+    }
 
     console.log(`✅ Scheduled recurring health check reminder for ${healthCheck.type}`);
     return notificationId;
@@ -242,21 +248,21 @@ export const scheduleHealthCheckReminder = async (healthCheck) => {
 export const cancelVaccinationReminder = async (petId, vaccinationName) => {
   try {
     const db = getFirestoreInstance();
-    if (!db) {
-      console.warn('Firestore not available');
+    const firestoreFunctions = getFirestoreFunctions();
+    
+    if (!db || !firestoreFunctions) {
+      console.warn('⚠️ Firestore not available');
       return;
     }
 
+    const { doc, getDoc } = firestoreFunctions;
     const notificationDoc = await getDoc(doc(db, 'notifications', `vaccination_${petId}_${vaccinationName}`));
     
     if (notificationDoc.exists()) {
       const data = notificationDoc.data();
-      
-      // Cancel all scheduled notifications
       for (const scheduled of data.scheduledNotifications) {
         await Notifications.cancelScheduledNotificationAsync(scheduled.id);
       }
-
       console.log(`✅ Cancelled vaccination reminders for ${vaccinationName}`);
     }
   } catch (error) {
@@ -270,11 +276,14 @@ export const cancelVaccinationReminder = async (petId, vaccinationName) => {
 export const cancelHealthCheckReminder = async (petId, checkType) => {
   try {
     const db = getFirestoreInstance();
-    if (!db) {
-      console.warn('Firestore not available');
+    const firestoreFunctions = getFirestoreFunctions();
+    
+    if (!db || !firestoreFunctions) {
+      console.warn('⚠️ Firestore not available');
       return;
     }
 
+    const { doc, getDoc } = firestoreFunctions;
     const notificationDoc = await getDoc(doc(db, 'notifications', `healthCheck_${petId}_${checkType}`));
     
     if (notificationDoc.exists()) {
@@ -293,11 +302,14 @@ export const cancelHealthCheckReminder = async (petId, checkType) => {
 export const getPetNotifications = async (petId) => {
   try {
     const db = getFirestoreInstance();
-    if (!db) {
-      console.warn('Firestore not available');
+    const firestoreFunctions = getFirestoreFunctions();
+    
+    if (!db || !firestoreFunctions) {
+      console.warn('⚠️ Firestore not available');
       return [];
     }
 
+    const { collection, getDocs, query, where } = firestoreFunctions;
     const notificationsRef = collection(db, 'notifications');
     const q = query(notificationsRef, where('petId', '==', petId));
     const querySnapshot = await getDocs(q);
@@ -318,8 +330,7 @@ export const getPetNotifications = async (petId) => {
 };
 
 /**
- * Send immediate notification (local)
- * For testing or immediate alerts
+ * Send immediate notification
  */
 export const sendImmediateNotification = async (title, body, data = {}) => {
   try {
@@ -330,7 +341,7 @@ export const sendImmediateNotification = async (title, body, data = {}) => {
         data,
         sound: true,
       },
-      trigger: null, // Immediate
+      trigger: null,
     });
     console.log('✅ Sent immediate notification');
   } catch (error) {
@@ -339,14 +350,13 @@ export const sendImmediateNotification = async (title, body, data = {}) => {
 };
 
 /**
- * Handle notification response (when user taps notification)
+ * Handle notification response
  */
 export const setupNotificationResponseHandler = (navigation) => {
   Notifications.addNotificationResponseReceivedListener(response => {
     const data = response.notification.request.content.data;
     
     if (data.type === 'vaccination' || data.type === 'healthCheck') {
-      // Navigate to pet profile
       navigation.navigate('PetProfile', { petId: data.petId });
     }
   });
