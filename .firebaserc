@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "pawguard-ee74c"
-  }
+    "default": "pawguard-ee74c",
+    "pawguard-ee74c": "pawguard-ee74c",
+    "pawguard-pet assistant": "pawguard-ee74c"
+  },
+  "targets": {},
+  "etags": {}
 }
