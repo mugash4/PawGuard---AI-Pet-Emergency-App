@@ -25,6 +25,11 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Emergency', { filter: scenarioType });
   };
 
+  // Handle upgrade button press - THIS WAS MISSING!
+  const handleUpgradePress = () => {
+    navigation.navigate('Subscription');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
@@ -179,11 +184,11 @@ export default function HomeScreen({ navigation }) {
         {!user?.isPremium && <AdBanner />}
 
         {/* Upgrade CTA for free users */}
-        {!user.isPremium && (
+        {!user?.isPremium && (
           <View style={styles.upgradeCTA}>
             <Text style={styles.upgradeTitle}>Want Unlimited Checks?</Text>
             <Text style={styles.upgradeText}>
-              Upgrade to Premium for unlimited AI food safety checks, no ads, and more features!
+              Upgrade to Premium for unlimited AI Assistant, food safety checks, no ads, and more features!
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
@@ -341,5 +346,42 @@ const styles = StyleSheet.create({
   featureDescription: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
+  },
+  upgradeCTA: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SPACING.xl,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    marginTop: SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    ...SHADOWS.medium,
+  },
+  upgradeTitle: {
+    fontSize: FONTS.sizes.xl,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  upgradeText: {
+    fontSize: FONTS.sizes.md,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: SPACING.lg,
+  },
+  upgradeButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    ...SHADOWS.small,
+  },
+  upgradeButtonText: {
+    fontSize: FONTS.sizes.md,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });

@@ -130,6 +130,28 @@ export default function KnowledgeScreen({ navigation }) {
       return;
     }
 
+    const handleUpgradePress = () => {
+      try {
+        // Check if we have navigation
+        if (!navigation) {
+          Alert.alert('Error', 'Navigation not available');
+          return;
+        }
+        
+        // Get parent navigator and navigate to Subscription
+        const parentNav = navigation.getParent();
+        if (parentNav && parentNav.navigate) {
+          parentNav.navigate('Subscription');
+        } else {
+          // Fallback: try direct navigation
+          navigation.navigate('Subscription');
+        }
+      } catch (error) {
+        console.error('Navigation error:', error);
+        Alert.alert('Error', 'Unable to open subscription screen. Please restart the app.');
+      }
+    };
+
     const userMessage = { role: 'user', content: chatInput.trim() };
     setChatMessages([...chatMessages, userMessage]);
     setChatInput('');
