@@ -1,11 +1,110 @@
 /**
- * AI Service - Multi-LLM Support
+ * AI Service - Multi-LLM Support with API Key Decryption
  * Supports DeepSeek, OpenAI, and OpenRouter APIs
- * Secure API key management via Firebase
+ * Secure API key management via Firebase with CryptoJS decryption
  */
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, waitForAuth } from './firebase';
+import CryptoJS from 'crypto-js';
+
+// CRITICAL FIX: Decryption key for API keys stored in Firebase
+// This should match the encryption key used in your admin panel
+const DECRYPTION_KEY = 'PawGuard_Secret_Key_2024';
+
+/**
+ * Decrypt API key from Firebase
+ * @param {string} encryptedKey - Encrypted API key from Firebase
+ * @returns {string} Decrypted API key
+ */
+function decryptApiKey(encryptedKey) {
+  try {
+    // Check if key is already decrypted (plain text)
+    if (!encryptedKey || !encryptedKey.includes('U2FsdGVk')) {
+      // If it doesn't look encrypted, return as-is
+      return encryptedKey;
+    }
+
+    // Decrypt using CryptoJS
+    const bytes = CryptoJS.AES.decrypt(encryptedKey, DECRYPTION_KEY);
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    
+    if (!decrypted) {
+      throw new Error('Decryption failed - empty result');
+    }
+
+    console.log('✅ API key decrypted successfully');
+    return decrypted;
+  } catch (error) {
+    console.error('❌ API key decryption error:', error);
+    throw new Error('Failed to decrypt API key. Please check encryption settings.');
+  }
+}
+
+/**
+ * Get and decrypt API keys from Firebase
+ * @returns {Promise<Object>} Decrypted API keys
+ */
+async function getApiKeys() {
+  try {
+    // Wait for authentication to complete
+    await waitForAuth();
+    
+    // Ensure db is available
+    if (!db) {
+      throw new Error('Firebase not initialized properly');
+    }
+    
+    // Get API keys from Firebase
+    const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
+    
+    if (!configDoc.exists()) {
+      throw new Error('API keys not configured in Firebase. Please add them via admin panel.');
+    }
+
+    const encryptedKeys = configDoc.data();
+    
+    // CRITICAL FIX: Decrypt all API keys before use
+    const decryptedKeys = {};
+    
+    if (encryptedKeys.deepseek) {
+      try {
+        decryptedKeys.deepseek = decryptApiKey(encryptedKeys.deepseek);
+        console.log('✅ DeepSeek API key ready');
+      } catch (error) {
+        console.warn('⚠️ DeepSeek key decryption failed:', error.message);
+      }
+    }
+    
+    if (encryptedKeys.openai) {
+      try {
+        decryptedKeys.openai = decryptApiKey(encryptedKeys.openai);
+        console.log('✅ OpenAI API key ready');
+      } catch (error) {
+        console.warn('⚠️ OpenAI key decryption failed:', error.message);
+      }
+    }
+    
+    if (encryptedKeys.openrouter) {
+      try {
+        decryptedKeys.openrouter = decryptApiKey(encryptedKeys.openrouter);
+        console.log('✅ OpenRouter API key ready');
+      } catch (error) {
+        console.warn('⚠️ OpenRouter key decryption failed:', error.message);
+      }
+    }
+    
+    // Check if at least one key is available
+    if (!decryptedKeys.deepseek && !decryptedKeys.openai && !decryptedKeys.openrouter) {
+      throw new Error('No valid API keys available. Please configure at least one AI provider.');
+    }
+    
+    return decryptedKeys;
+  } catch (error) {
+    console.error('Error getting API keys:', error);
+    throw error;
+  }
+}
 
 /**
  * Call AI with automatic LLM selection
@@ -15,22 +114,8 @@ import { db, waitForAuth } from './firebase';
  */
 export const callAI = async (message, context = 'user') => {
   try {
-    // ✅ WAIT for authentication to complete
-    await waitForAuth();
-    
-    // Ensure db is available
-    if (!db) {
-      throw new Error('Firebase not initialized properly');
-    }
-    
-    // Get API keys from Firebase (set by admin)
-    const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
-    
-    if (!configDoc.exists()) {
-      throw new Error('API keys not configured. Please contact admin.');
-    }
-
-    const apiKeys = configDoc.data();
+    // Get decrypted API keys
+    const apiKeys = await getApiKeys();
     
     // Try LLMs in order: DeepSeek -> OpenRouter -> OpenAI
     if (apiKeys.deepseek) {
@@ -211,14 +296,9 @@ If the situation seems serious or life-threatening, immediately advise contactin
 Keep responses brief (2-4 sentences) unless more detail is specifically requested.`;
 
   try {
-    // ✅ WAIT for authentication to complete
-    await waitForAuth();
-    
-    // Ensure db is available
-    if (!db) {
-      throw new Error('Firebase not initialized properly');
-    }
-    
+    // Get decrypted API keys
+    const apiKeys = await getApiKeys();
+
     // Build conversation context
     const messages = [
       { role: 'system', content: systemPrompt }
@@ -236,16 +316,7 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
     // Add current message
     messages.push({ role: 'user', content: message });
 
-    // Get API keys from Firebase
-    const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
-    
-    if (!configDoc.exists()) {
-      throw new Error('API keys not configured. Please contact admin.');
-    }
-
-    const apiKeys = configDoc.data();
-
-    // Call appropriate API
+    // Call appropriate API with decrypted key
     let response;
     if (apiKeys.deepseek) {
       response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -352,7 +423,7 @@ export const checkQueryLimit = async (userId, isPremium) => {
   }
 
   try {
-    // ✅ WAIT for authentication to complete
+    // Wait for authentication to complete
     await waitForAuth();
     
     // Ensure db is available
@@ -384,7 +455,7 @@ export const checkQueryLimit = async (userId, isPremium) => {
  */
 export const trackQueryUsage = async (userId) => {
   try {
-    // ✅ WAIT for authentication to complete
+    // Wait for authentication to complete
     await waitForAuth();
     
     // Ensure db is available

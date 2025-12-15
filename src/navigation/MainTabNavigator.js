@@ -53,9 +53,17 @@ export default function MainTabNavigator() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textLight,
         tabBarStyle: {
-          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 8,
+          // FIXED: Proper safe area handling to prevent overlap with system nav bar
+          paddingBottom: Platform.select({
+            ios: insets.bottom, // iOS uses safe area directly
+            android: Math.max(insets.bottom, 8), // Android: at least 8px padding
+          }),
           paddingTop: 8,
-          height: (Platform.OS === 'ios' ? 50 : 60) + (Platform.OS === 'ios' ? insets.bottom : 0),
+          // FIXED: Height calculation to account for safe area
+          height: Platform.select({
+            ios: 50 + insets.bottom, // iOS: tab height + safe area
+            android: 60 + Math.max(insets.bottom, 8), // Android: tab height + padding
+          }),
           backgroundColor: COLORS.surface,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
@@ -64,6 +72,11 @@ export default function MainTabNavigator() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
+          // FIXED: Position above system navigation
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
         },
         tabBarLabelStyle: {
           fontSize: 12,
