@@ -15,11 +15,11 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons'; // ✅ ADDED THIS IMPORT
 import { UserContext } from '../context/UserContext';
 import { checkFoodSafety, checkQueryLimit, trackQueryUsage } from '../services/aiService';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 import AdBanner from '../components/AdBanner';
-import UpgradePrompt from '../components/UpgradePrompt';
 
 export default function FoodCheckerScreen({ navigation }) {
   const context = useContext(UserContext);
@@ -50,12 +50,12 @@ export default function FoodCheckerScreen({ navigation }) {
 
   const loadRemainingQueries = async () => {
     try {
-      if (!user?.userId && !user?.id) {
+      // ✅ FIXED: Use user.id consistently
+      if (!user?.id) {
         console.warn('No user ID available');
         return;
       }
-      const userId = user.userId || user.id;
-      const limit = await checkQueryLimit(userId, user.isPremium);
+      const limit = await checkQueryLimit(user.id, user.isPremium);
       setRemaining(limit.remaining);
     } catch (error) {
       console.error('Error loading remaining queries:', error);
@@ -69,16 +69,15 @@ export default function FoodCheckerScreen({ navigation }) {
       return;
     }
 
-    if (!user?.userId && !user?.id) {
+    // ✅ FIXED: Use user.id consistently
+    if (!user?.id) {
       Alert.alert('Error', 'User session not available. Please restart the app.');
       return;
     }
 
     try {
-      const userId = user.userId || user.id;
-      
       // Check query limit
-      const limit = await checkQueryLimit(userId, user.isPremium);
+      const limit = await checkQueryLimit(user.id, user.isPremium);
       
       if (!limit.allowed) {
         Alert.alert(
@@ -99,7 +98,7 @@ export default function FoodCheckerScreen({ navigation }) {
       const response = await checkFoodSafety(foodName);
       
       // Track usage
-      await trackQueryUsage(userId);
+      await trackQueryUsage(user.id);
       
       setResult(response);
       loadRemainingQueries(); // Refresh remaining count
@@ -117,20 +116,14 @@ export default function FoodCheckerScreen({ navigation }) {
 
   const handleUpgradePress = () => {
     try {
-      // Check if we have navigation
+      // ✅ FIXED: Better navigation handling
       if (!navigation) {
         Alert.alert('Error', 'Navigation not available');
         return;
       }
     
-      // Get parent navigator and navigate to Subscription
-      const parentNav = navigation.getParent();
-      if (parentNav && parentNav.navigate) {
-        parentNav.navigate('Subscription');
-      } else {
-        // Fallback: try direct navigation
-        navigation.navigate('Subscription');
-      }
+      // Navigate to root stack's Subscription screen
+      navigation.navigate('Subscription');
     } catch (error) {
       console.error('Navigation error:', error);
       Alert.alert('Error', 'Unable to open subscription screen. Please restart the app.');
@@ -248,7 +241,7 @@ export default function FoodCheckerScreen({ navigation }) {
               {/* Explanation */}
               {result.shortExplanation && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>📝 Explanation</Text>
+                  <Text style={styles.sectionTitle}>💡 Explanation</Text>
                   <Text style={styles.explanationText}>
                     {result.shortExplanation}
                   </Text>
@@ -258,7 +251,7 @@ export default function FoodCheckerScreen({ navigation }) {
               {/* Symptoms */}
               {result.symptoms && result.symptoms.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>⚠️ Potential Symptoms</Text>
+                  <Text style={styles.sectionTitle}>🩺 Potential Symptoms</Text>
                   {result.symptoms.map((symptom, index) => (
                     <View key={index} style={styles.listItem}>
                       <Text style={styles.bullet}>•</Text>
@@ -271,7 +264,7 @@ export default function FoodCheckerScreen({ navigation }) {
               {/* Advice */}
               {result.advice && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>💡 What To Do</Text>
+                  <Text style={styles.sectionTitle}>📋 What To Do</Text>
                   <Text style={styles.adviceText}>{result.advice}</Text>
                 </View>
               )}
@@ -316,7 +309,7 @@ export default function FoodCheckerScreen({ navigation }) {
                     styles.quickRefStatus,
                     { color: item.safe ? '#34C759' : '#FF3B30' }
                   ]}>
-                    {item.safe ? '✓' : '✗'}
+                    {item.safe ? '✅' : '❌'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -344,7 +337,7 @@ export default function FoodCheckerScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* Floating AI Chat Button */}
+      {/* Floating AI Chat Button - ✅ NOW WORKS WITH IONICONS */}
       <TouchableOpacity
         style={styles.floatingChatButton}
         onPress={() => {
@@ -355,9 +348,8 @@ export default function FoodCheckerScreen({ navigation }) {
           }
         }}
       >
-      <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
-    </TouchableOpacity>
-
+        <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -629,20 +621,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   floatingChatButton: {
-  position: 'absolute',
-  right: 20,
-  bottom: 100,
-  width: 60,
-  height: 60,
-  borderRadius: 30,
-  backgroundColor: COLORS.primary,
-  justifyContent: 'center',
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  elevation: 8,
-},
-
+    position: 'absolute',
+    right: 20,
+    bottom: 100,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
 });

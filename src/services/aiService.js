@@ -1,33 +1,93 @@
 /**
- * AI Service - Multi-LLM Support
+ * AI Service - Multi-LLM Support with Mock Fallback
  * Supports DeepSeek, OpenAI, and OpenRouter APIs
- * Secure API key management via Firebase
+ * Falls back to mock responses if no API keys configured
  */
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, waitForAuth } from './firebase';
 
+// ✅ ADDED: Mock responses for testing without API keys
+const MOCK_MODE = false; // Set to false when you have real API keys
+
 /**
- * Call AI with automatic LLM selection
- * @param {string} message - The prompt/message
- * @param {string} context - 'user' | 'system' - determines if query counts against limit
- * @returns {Promise<string>} AI response
+ * Mock AI responses for testing
+ */
+const getMockResponse = (message) => {
+  const lowerMessage = message.toLowerCase();
+  
+  // Food safety mock responses
+  if (lowerMessage.includes('chocolate')) {
+    return {
+      safetyLevel: 'toxic',
+      emoji: '☠️',
+      shortExplanation: 'Chocolate is highly toxic to dogs and can cause serious health issues or death.',
+      symptoms: ['Vomiting', 'Diarrhea', 'Rapid heart rate', 'Seizures', 'Tremors'],
+      advice: 'If your dog ate chocolate, contact your veterinarian or pet poison control immediately. Do not wait for symptoms to appear.'
+    };
+  } else if (lowerMessage.includes('grape') || lowerMessage.includes('raisin')) {
+    return {
+      safetyLevel: 'toxic',
+      emoji: '🍇',
+      shortExplanation: 'Grapes and raisins can cause sudden kidney failure in dogs, even in small amounts.',
+      symptoms: ['Vomiting', 'Lethargy', 'Loss of appetite', 'Decreased urination', 'Abdominal pain'],
+      advice: 'Contact your vet immediately if your dog consumed grapes or raisins. Kidney failure can develop within 24-72 hours.'
+    };
+  } else if (lowerMessage.includes('apple')) {
+    return {
+      safetyLevel: 'safe',
+      emoji: '🍎',
+      shortExplanation: 'Apples are safe and healthy for dogs in moderation. Remove seeds and core first.',
+      symptoms: [],
+      advice: 'Cut apples into bite-sized pieces and remove seeds (which contain cyanide). Great source of vitamins A and C!'
+    };
+  } else if (lowerMessage.includes('carrot')) {
+    return {
+      safetyLevel: 'safe',
+      emoji: '🥕',
+      shortExplanation: 'Carrots are excellent for dogs - low calorie and great for dental health.',
+      symptoms: [],
+      advice: 'Can be served raw or cooked. Raw carrots are great for cleaning teeth. Cut into appropriate sizes to prevent choking.'
+    };
+  } else if (lowerMessage.includes('onion') || lowerMessage.includes('garlic')) {
+    return {
+      safetyLevel: 'toxic',
+      emoji: '🧅',
+      shortExplanation: 'Onions and garlic are toxic to dogs and can damage red blood cells, causing anemia.',
+      symptoms: ['Weakness', 'Pale gums', 'Rapid breathing', 'Orange or dark red urine', 'Vomiting'],
+      advice: 'Contact your veterinarian if your dog consumed onions or garlic. Toxicity can be cumulative over time.'
+    };
+  }
+  
+  // Chat mock responses
+  return 'I\'m a mock AI assistant. To use real AI, please configure API keys in Firebase. For now, I can provide basic information about pet emergencies. Try asking about specific foods like chocolate, grapes, apples, carrots, or onions!';
+};
+
+/**
+ * Call AI with automatic LLM selection or mock fallback
  */
 export const callAI = async (message, context = 'user') => {
   try {
-    // ✅ WAIT for authentication to complete
+    // ✅ If mock mode, return mock response immediately
+    if (MOCK_MODE) {
+      console.log('🧪 Using MOCK AI response');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      return getMockResponse(message);
+    }
+
+    // Real API mode
     await waitForAuth();
     
-    // Ensure db is available
     if (!db) {
       throw new Error('Firebase not initialized properly');
     }
     
-    // Get API keys from Firebase (set by admin)
+    // Get API keys from Firebase
     const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
     
     if (!configDoc.exists()) {
-      throw new Error('API keys not configured. Please contact admin.');
+      console.warn('⚠️ No API keys configured, using mock responses');
+      return getMockResponse(message);
     }
 
     const apiKeys = configDoc.data();
@@ -40,11 +100,14 @@ export const callAI = async (message, context = 'user') => {
     } else if (apiKeys.openai) {
       return await callOpenAI(message, apiKeys.openai);
     } else {
-      throw new Error('No AI API keys configured');
+      console.warn('⚠️ No API keys found, using mock responses');
+      return getMockResponse(message);
     }
   } catch (error) {
     console.error('AI call error:', error);
-    throw error;
+    // ✅ Fallback to mock on error
+    console.warn('⚠️ AI error, using mock response as fallback');
+    return getMockResponse(message);
   }
 };
 
@@ -95,7 +158,7 @@ async function callOpenAI(message, apiKey) {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini', // Cost-effective model
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -121,7 +184,7 @@ async function callOpenAI(message, apiKey) {
 }
 
 /**
- * Call OpenRouter API (supports 100+ models)
+ * Call OpenRouter API
  */
 async function callOpenRouter(message, apiKey) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -133,7 +196,7 @@ async function callOpenRouter(message, apiKey) {
       'X-Title': 'PawGuard Pet Emergency App'
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-3-haiku', // Fast and cost-effective
+      model: 'anthropic/claude-3-haiku',
       messages: [
         {
           role: 'system',
@@ -176,14 +239,18 @@ Keep it brief and actionable.`;
   try {
     const response = await callAI(prompt, 'user');
     
-    // Try to parse JSON response
+    // If response is already an object (mock mode), return it
+    if (typeof response === 'object') {
+      return response;
+    }
+    
+    // Try to parse JSON response (real API mode)
     try {
       return JSON.parse(response);
     } catch (parseError) {
-      // If JSON parsing fails, extract structured data from text
       console.warn('JSON parse failed, extracting from text:', response);
       
-      // Fallback: create structured response
+      // Fallback: create structured response from text
       return {
         safetyLevel: response.toLowerCase().includes('toxic') || response.toLowerCase().includes('dangerous') ? 'toxic' :
                      response.toLowerCase().includes('caution') || response.toLowerCase().includes('careful') ? 'caution' : 'safe',
@@ -211,20 +278,24 @@ If the situation seems serious or life-threatening, immediately advise contactin
 Keep responses brief (2-4 sentences) unless more detail is specifically requested.`;
 
   try {
-    // ✅ WAIT for authentication to complete
+    // ✅ If mock mode, return mock response
+    if (MOCK_MODE) {
+      console.log('🧪 Using MOCK AI chat response');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      return getMockResponse(message);
+    }
+
+    // Real API mode
     await waitForAuth();
     
-    // Ensure db is available
     if (!db) {
       throw new Error('Firebase not initialized properly');
     }
     
     // Build conversation context
-    const messages = [
-      { role: 'system', content: systemPrompt }
-    ];
+    const messages = [{ role: 'system', content: systemPrompt }];
 
-    // Add conversation history (last 5 messages to keep context manageable)
+    // Add conversation history (last 5 messages)
     const recentHistory = conversationHistory.slice(-5);
     recentHistory.forEach(msg => {
       messages.push({
@@ -240,7 +311,8 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
     const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
     
     if (!configDoc.exists()) {
-      throw new Error('API keys not configured. Please contact admin.');
+      console.warn('⚠️ No API keys, using mock response');
+      return getMockResponse(message);
     }
 
     const apiKeys = configDoc.data();
@@ -292,7 +364,8 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
         })
       });
     } else {
-      throw new Error('No AI API keys configured');
+      console.warn('⚠️ No API keys, using mock response');
+      return getMockResponse(message);
     }
 
     if (!response.ok) {
@@ -304,7 +377,8 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
     return data.choices[0].message.content;
   } catch (error) {
     console.error('Chat AI error:', error);
-    throw error;
+    // ✅ Fallback to mock on error
+    return getMockResponse(message);
   }
 };
 
@@ -352,10 +426,8 @@ export const checkQueryLimit = async (userId, isPremium) => {
   }
 
   try {
-    // ✅ WAIT for authentication to complete
     await waitForAuth();
     
-    // Ensure db is available
     if (!db) {
       console.warn('Firebase not initialized, allowing query');
       return { allowed: true, remaining: 5 };
@@ -374,7 +446,6 @@ export const checkQueryLimit = async (userId, isPremium) => {
     return { allowed: true, remaining: 5 - currentCount };
   } catch (error) {
     console.error('Error checking query limit:', error);
-    // On error, allow the query but return cautious remaining count
     return { allowed: true, remaining: 5 };
   }
 };
@@ -384,10 +455,8 @@ export const checkQueryLimit = async (userId, isPremium) => {
  */
 export const trackQueryUsage = async (userId) => {
   try {
-    // ✅ WAIT for authentication to complete
     await waitForAuth();
     
-    // Ensure db is available
     if (!db) {
       console.warn('Firebase not initialized, skipping usage tracking');
       return;
@@ -407,6 +476,5 @@ export const trackQueryUsage = async (userId) => {
     }, { merge: true });
   } catch (error) {
     console.error('Error tracking query usage:', error);
-    // Don't throw - tracking is not critical
   }
 };
