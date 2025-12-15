@@ -8,10 +8,14 @@ const ENCRYPTION_KEY = 'pawguard-super-secret-key-2024'; // In production, use e
 export default function APIKeyManager() {
   const [apiKeys, setApiKeys] = useState({
     deepseek: '',
+    openai: '',
+    openrouter: '',
     admob: '',
   });
   const [showKeys, setShowKeys] = useState({
     deepseek: false,
+    openai: false,
+    openrouter: false,
     admob: false,
   });
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,10 @@ export default function APIKeyManager() {
           }
         }
         
-        setApiKeys(decryptedKeys);
+        setApiKeys(prev => ({
+          ...prev,
+          ...decryptedKeys
+        }));
       }
     } catch (error) {
       console.error('Error loading API keys:', error);
@@ -115,11 +122,18 @@ export default function APIKeyManager() {
           </div>
         )}
 
+        <div style={styles.sectionHeader}>
+          <h3 style={styles.sectionTitle}>🤖 AI Service API Keys</h3>
+          <p style={styles.sectionDescription}>
+            Configure at least one AI service. The app will use them in this priority order: DeepSeek → OpenRouter → OpenAI
+          </p>
+        </div>
+
         {/* DeepSeek API Key */}
         <div style={styles.keySection}>
           <label style={styles.label}>
             DeepSeek API Key
-            <span style={styles.labelHelper}> (Required for AI features)</span>
+            <span style={styles.labelHelper}> (Recommended - Most cost-effective)</span>
           </label>
           <div style={styles.inputGroup}>
             <input
@@ -146,7 +160,84 @@ export default function APIKeyManager() {
             >
               DeepSeek Platform
             </a>
+            {' '}• Model: deepseek-chat • Cost: $0.14 per 1M tokens
           </p>
+        </div>
+
+        {/* OpenAI API Key */}
+        <div style={styles.keySection}>
+          <label style={styles.label}>
+            OpenAI API Key
+            <span style={styles.labelHelper}> (Optional - Premium quality)</span>
+          </label>
+          <div style={styles.inputGroup}>
+            <input
+              type={showKeys.openai ? 'text' : 'password'}
+              value={apiKeys.openai}
+              onChange={(e) => setApiKeys({ ...apiKeys, openai: e.target.value })}
+              placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              style={styles.input}
+            />
+            <button
+              onClick={() => toggleVisibility('openai')}
+              style={styles.toggleButton}
+            >
+              {showKeys.openai ? '🙈 Hide' : '👁️ Show'}
+            </button>
+          </div>
+          <p style={styles.helper}>
+            Get your API key from:{' '}
+            <a
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.link}
+            >
+              OpenAI Platform
+            </a>
+            {' '}• Model: gpt-4o-mini • Cost: $0.15 per 1M input tokens
+          </p>
+        </div>
+
+        {/* OpenRouter API Key */}
+        <div style={styles.keySection}>
+          <label style={styles.label}>
+            OpenRouter API Key
+            <span style={styles.labelHelper}> (Optional - Access 100+ models)</span>
+          </label>
+          <div style={styles.inputGroup}>
+            <input
+              type={showKeys.openrouter ? 'text' : 'password'}
+              value={apiKeys.openrouter}
+              onChange={(e) => setApiKeys({ ...apiKeys, openrouter: e.target.value })}
+              placeholder="sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              style={styles.input}
+            />
+            <button
+              onClick={() => toggleVisibility('openrouter')}
+              style={styles.toggleButton}
+            >
+              {showKeys.openrouter ? '🙈 Hide' : '👁️ Show'}
+            </button>
+          </div>
+          <p style={styles.helper}>
+            Get your API key from:{' '}
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.link}
+            >
+              OpenRouter Platform
+            </a>
+            {' '}• Model: claude-3-haiku • Flexible pricing
+          </p>
+        </div>
+
+        <div style={styles.divider}></div>
+
+        <div style={styles.sectionHeader}>
+          <h3 style={styles.sectionTitle}>📱 Other Services</h3>
         </div>
 
         {/* AdMob App ID */}
@@ -199,9 +290,20 @@ export default function APIKeyManager() {
           <ul style={styles.infoList}>
             <li>API keys are encrypted using AES-256 before storage</li>
             <li>Keys are stored in Firestore, never in app code</li>
-            <li>Only Cloud Functions can decrypt and use these keys</li>
-            <li>Mobile app never has direct access to API keys</li>
-            <li>All AI requests go through secure Firebase Functions</li>
+            <li>Only the mobile app's AI service can decrypt and use these keys</li>
+            <li>Mobile app retrieves encrypted keys and decrypts them client-side</li>
+            <li>Priority: DeepSeek (cheapest) → OpenRouter → OpenAI</li>
+            <li>Configure at least one AI service key for the app to function</li>
+          </ul>
+        </div>
+
+        <div style={styles.warningBox}>
+          <h3 style={styles.warningTitle}>⚠️ Important Notes</h3>
+          <ul style={styles.infoList}>
+            <li><strong>At least one AI key required:</strong> DeepSeek, OpenAI, or OpenRouter must be configured</li>
+            <li><strong>Key format:</strong> Ensure keys start with "sk-" (OpenAI/DeepSeek) or "sk-or-v1-" (OpenRouter)</li>
+            <li><strong>Testing:</strong> After saving, test AI features in the mobile app (Food Checker, AI Chat)</li>
+            <li><strong>Costs:</strong> Monitor your API usage on respective platforms to avoid unexpected charges</li>
           </ul>
         </div>
       </div>
@@ -211,7 +313,7 @@ export default function APIKeyManager() {
 
 const styles = {
   container: {
-    maxWidth: '800px',
+    maxWidth: '900px',
   },
   card: {
     backgroundColor: '#fff',
@@ -230,6 +332,25 @@ const styles = {
     color: '#666',
     lineHeight: '1.6',
   },
+  sectionHeader: {
+    marginBottom: '24px',
+  },
+  sectionTitle: {
+    margin: '0 0 8px 0',
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#1a1a2e',
+  },
+  sectionDescription: {
+    margin: 0,
+    fontSize: '14px',
+    color: '#666',
+  },
+  divider: {
+    height: '1px',
+    backgroundColor: '#e0e0e0',
+    margin: '32px 0',
+  },
   message: {
     padding: '12px 16px',
     borderRadius: '8px',
@@ -247,7 +368,7 @@ const styles = {
     border: '1px solid #f5c6cb',
   },
   keySection: {
-    marginBottom: '32px',
+    marginBottom: '28px',
   },
   label: {
     display: 'block',
@@ -272,6 +393,7 @@ const styles = {
     border: '2px solid #e0e0e0',
     borderRadius: '8px',
     fontFamily: 'monospace',
+    transition: 'border-color 0.2s',
   },
   toggleButton: {
     padding: '12px 20px',
@@ -280,15 +402,18 @@ const styles = {
     borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
+    transition: 'all 0.2s',
   },
   helper: {
     margin: '8px 0 0 0',
     fontSize: '13px',
     color: '#666',
+    lineHeight: '1.6',
   },
   link: {
     color: '#FF8C61',
     textDecoration: 'none',
+    fontWeight: '500',
   },
   saveButton: {
     width: '100%',
@@ -301,6 +426,7 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'background 0.2s',
+    marginTop: '8px',
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -313,11 +439,24 @@ const styles = {
     borderRadius: '8px',
     border: '1px solid #e0e0e0',
   },
+  warningBox: {
+    marginTop: '16px',
+    padding: '24px',
+    backgroundColor: '#fff3cd',
+    borderRadius: '8px',
+    border: '1px solid #ffc107',
+  },
   infoTitle: {
     margin: '0 0 16px 0',
     fontSize: '16px',
     fontWeight: '600',
     color: '#333',
+  },
+  warningTitle: {
+    margin: '0 0 16px 0',
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#856404',
   },
   infoList: {
     margin: 0,
