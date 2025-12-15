@@ -8,14 +8,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useUser } from '../context/UserContext';
 import AdBanner from '../components/AdBanner';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
-import UpgradePrompt from '../components/UpgradePrompt';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useUser();
+  const tabBarHeight = useBottomTabBarHeight();
 
   // Track navigation for interstitial ads (free users only)
   useInterstitialAd(navigation);
@@ -25,7 +26,7 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Emergency', { filter: scenarioType });
   };
 
-  // Handle upgrade button press - THIS WAS MISSING!
+  // Handle upgrade button press
   const handleUpgradePress = () => {
     navigation.navigate('Subscription');
   };
@@ -34,7 +35,9 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: SPACING.xl }}
+        contentContainerStyle={{ 
+          paddingBottom: tabBarHeight + SPACING.md 
+        }}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -198,8 +201,6 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
-
-        <View style={{ height: SPACING.x1 }} />
       </ScrollView>
     </SafeAreaView>
   );
