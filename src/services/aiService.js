@@ -10,7 +10,7 @@ import CryptoJS from 'crypto-js';
 
 // CRITICAL FIX: Decryption key for API keys stored in Firebase
 // This should match the encryption key used in your admin panel
-const DECRYPTION_KEY = 'PawGuard_Secret_Key_2024';
+const DECRYPTION_KEY = 'pawguard-super-secret-key-2024';
 
 /**
  * Decrypt API key from Firebase

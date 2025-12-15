@@ -199,7 +199,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: SPACING.xl }} />
+        <View style={{ height: SPACING.x3 }} />
       </ScrollView>
     </SafeAreaView>
   );
