@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,11 +13,9 @@ import AdBanner from '../components/AdBanner';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 import UpgradePrompt from '../components/UpgradePrompt';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useUser();
-  const insets = useSafeAreaInsets();
 
   // Track navigation for interstitial ads (free users only)
   useInterstitialAd(navigation);
@@ -28,24 +25,16 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Emergency', { filter: scenarioType });
   };
 
-  // Handle upgrade button press
+  // Handle upgrade button press - THIS WAS MISSING!
   const handleUpgradePress = () => {
     navigation.navigate('Subscription');
   };
-
-  // FIXED: Calculate proper bottom padding to account for tab bar
-  const tabBarHeight = Platform.select({
-    ios: 50 + insets.bottom,
-    android: 60 + Math.max(insets.bottom, 8),
-  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ 
-          paddingBottom: tabBarHeight + SPACING.lg 
-        }}
+        contentContainerStyle={{ paddingBottom: SPACING.xl }}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -75,7 +64,7 @@ export default function HomeScreen({ navigation }) {
         {/* AdMob Banner - Integrated in content */}
         {!user?.isPremium && <AdBanner />}
 
-        {/* Quick Actions - 2 per row */}
+        {/* Quick Actions - FIXED: 2 per row */}
         <Text style={styles.sectionTitle}>Emergency First Aid</Text>
         <View style={styles.quickActions}>
           <QuickActionCard
@@ -209,6 +198,8 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
+
+        <View style={{ height: SPACING.x1 }} />
       </ScrollView>
     </SafeAreaView>
   );
