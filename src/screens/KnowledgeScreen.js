@@ -116,41 +116,36 @@ export default function KnowledgeScreen({ navigation }) {
   const sendChatMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
 
-    // FIXED: Changed user.userId to user.id
-    const limit = await checkQueryLimit(user.id, user.isPremium);
-    if (!limit.allowed) {
-      Alert.alert(
-        'Daily Limit Reached',
-        'You\'ve used all 5 free AI queries today. Upgrade to Premium for unlimited queries!',
-        [
-          { text: 'Maybe Later', style: 'cancel' },
-          { text: 'Upgrade Now', onPress: () => navigation.navigate('Subscription') }
-        ]
-      );
+    // Check if user exists
+    if (!user?.id) {
+      Alert.alert('Error', 'User session not available. Please restart the app.');
       return;
     }
 
-    const handleUpgradePress = () => {
-      try {
-        // Check if we have navigation
-        if (!navigation) {
-          Alert.alert('Error', 'Navigation not available');
-          return;
-        }
-        
-        // Get parent navigator and navigate to Subscription
-        const parentNav = navigation.getParent();
-        if (parentNav && parentNav.navigate) {
-          parentNav.navigate('Subscription');
-        } else {
-          // Fallback: try direct navigation
-          navigation.navigate('Subscription');
-        }
-      } catch (error) {
-        console.error('Navigation error:', error);
-        Alert.alert('Error', 'Unable to open subscription screen. Please restart the app.');
+    // Check query limit
+    try {
+      const limit = await checkQueryLimit(user.id, user.isPremium);
+      if (!limit.allowed) {
+        Alert.alert(
+          'Daily Limit Reached',
+          'You\'ve used all 5 free AI queries today. Upgrade to Premium for unlimited queries!',
+          [
+            { text: 'Maybe Later', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => {
+              try {
+                navigation.navigate('Subscription');
+              } catch (navError) {
+                console.error('Navigation error:', navError);
+              }
+            }}
+          ]
+        );
+        return;
       }
-    };
+    } catch (error) {
+      console.error('Error checking query limit:', error);
+      // Continue anyway
+    }
 
     const userMessage = { role: 'user', content: chatInput.trim() };
     setChatMessages([...chatMessages, userMessage]);
@@ -162,18 +157,25 @@ export default function KnowledgeScreen({ navigation }) {
       const aiMessage = { role: 'assistant', content: response };
       setChatMessages(prev => [...prev, aiMessage]);
       
-      // FIXED: Changed user.userId to user.id
       await trackQueryUsage(user.id);
     } catch (error) {
       console.error('Chat error:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to get AI response. Please check your API keys are configured correctly.',
-        [{ text: 'OK' }]
-      );
+      
+      let errorMessage = '⚠️ Unable to connect to AI assistant. ';
+      
+      if (error.message && error.message.includes('API keys not')) {
+        errorMessage += 'The AI service needs to be configured in Firebase Console. Please check:\n\n1. Open Firebase Console\n2. Go to Firestore Database\n3. Check collection "config" → document "apiKeys"\n4. Add field "deepseek" with your DeepSeek API key';
+      } else if (error.message && error.message.includes('network')) {
+        errorMessage += 'Please check your internet connection.';
+      } else {
+        errorMessage += 'Please try again. Error: ' + (error.message || 'Unknown error');
+      }
+      
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
+      
       setChatMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: '❌ Sorry, I encountered an error. Please make sure API keys are configured in Firebase Console.' 
+        content: '⚠️ Sorry, I encountered an error. ' + errorMessage
       }]);
     } finally {
       setChatLoading(false);
