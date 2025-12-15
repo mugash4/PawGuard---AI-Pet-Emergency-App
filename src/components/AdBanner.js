@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native'; // ✅ FIXED: Changed from 'react' to 'react-native'
+import { View, StyleSheet, Platform } from 'react-native'; 
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useUser } from '../context/UserContext';
 
