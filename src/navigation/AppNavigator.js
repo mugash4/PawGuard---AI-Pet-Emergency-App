@@ -35,21 +35,8 @@ export default function AppNavigator() {
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Subscription" component={SubscriptionScreen} />
         </>
-      ) : (
-        <>
-          {/* ✅ FIXED: Main is now the first screen after onboarding */}
-          <Stack.Screen name="Main" component={MainTabNavigator} />
-          {/* ✅ ADDED: Subscription accessible from any tab */}
-          <Stack.Screen 
-            name="Subscription" 
-            component={SubscriptionScreen}
-            options={{
-              presentation: 'modal',
-              headerShown: false
-            }}
-          />
-        </>
-      )}
+      ) : null}
+      <Stack.Screen name="Main" component={MainTabNavigator} />
     </Stack.Navigator>
   );
 }
