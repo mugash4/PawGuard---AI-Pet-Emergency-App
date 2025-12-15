@@ -165,7 +165,7 @@ export default function EmergencyScreen({ navigation, route }) {
       {/* Emergency Scenarios List */}
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: SPACING.xl }} // Space for tab bar
+        contentContainerStyle={{ paddingBottom: 150 }} // Extra space for tab bar + floating button
       >
         {/* AdMob Banner - First Ad */}
         {!user.isPremium && <AdBanner />}
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
   position: 'absolute',
   right: 20,
-  bottom: 100, // Above tab bar
+  bottom: 90, // Above tab bar
   width: 60,
   height: 60,
   borderRadius: 30,

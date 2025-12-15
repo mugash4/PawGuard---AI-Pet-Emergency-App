@@ -249,7 +249,7 @@ export default function KnowledgeScreen({ navigation }) {
       {/* Content Area */}
       <ScrollView 
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 200 }} // Extra space for tab bar + floating button + content
       >
         {/* Articles Tab */}
         {activeTab === 'articles' && (
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
     position: 'absolute',
     right: 20,
-    bottom: 100,
+    bottom: 90,
     width: 60,
     height: 60,
     borderRadius: 30,
