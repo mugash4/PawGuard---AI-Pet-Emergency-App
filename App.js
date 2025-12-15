@@ -20,7 +20,7 @@ export default function App() {
 
         // CRITICAL FIX: Longer delay for native modules to be fully ready
         // This fixes the React Native 0.76.5 + Expo 52 timing issues
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         // STEP 1: Initialize Firebase (non-blocking, with timeout)
         try {
@@ -36,18 +36,25 @@ export default function App() {
           // Continue anyway - app can work without Firebase
         }
 
-        // STEP 2: Initialize AdMob (with strict timeout and error handling)
+        // STEP 2: Initialize AdMob (CRITICAL FIX: MUST complete before app renders)
         try {
-          const adMobPromise = import('./src/services/adMobService').then(module => module.default.initialize());
-          const adTimeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('AdMob timeout')), 8000)
-          );
+          console.log('🎯 Starting AdMob initialization (CRITICAL)...');
+          const adMobModule = await import('./src/services/adMobService');
+          const adMobService = adMobModule.default;
           
-          await Promise.race([adMobPromise, adTimeoutPromise]);
-          console.log('✅ AdMob service initialized successfully');
+          // CRITICAL: Wait for AdMob to fully initialize before proceeding
+          await adMobService.initialize();
+          
+          // Verify it actually initialized
+          if (adMobService.isInitialized) {
+            console.log('✅ AdMob service initialized and verified successfully');
+          } else {
+            console.warn('⚠️ AdMob initialization completed but isInitialized flag is false');
+          }
         } catch (adError) {
-          console.warn('⚠️ AdMob initialization error (non-critical):', adError.message);
-          // Continue - ads just won't work
+          console.error('❌ AdMob initialization error:', adError.message);
+          console.error('Stack:', adError.stack);
+          // Continue - app can work without ads, but banner ads won't show
         }
 
         // STEP 3: Request notification permissions (optional, non-blocking)

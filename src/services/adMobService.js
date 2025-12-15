@@ -10,7 +10,7 @@ class AdMobService {
     this.lastInterstitialTime = 0;
     this.isInterstitialLoaded = false;
     this.isRewardedLoaded = false;
-    this.isInitialized = false;
+    this.isInitialized = false; // PUBLIC: Components can check this
     this.isInitializing = false;
     this.initializationFailed = false;
   }
@@ -44,16 +44,18 @@ class AdMobService {
       // CRITICAL FIX: Strict timeout to prevent hanging
       const initPromise = MobileAds().initialize();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('AdMob initialization timeout after 8 seconds')), 8000)
+        setTimeout(() => reject(new Error('AdMob initialization timeout after 10 seconds')), 10000)
       );
 
       const adapterStatuses = await Promise.race([initPromise, timeoutPromise]);
       
-      console.log('✅ Google Mobile Ads initialized successfully');
+      console.log('✅ Google Mobile Ads SDK initialized successfully');
+      console.log('📊 Adapter statuses:', JSON.stringify(adapterStatuses, null, 2));
       
+      // CRITICAL: Mark as initialized IMMEDIATELY so banner ads can proceed
       this.isInitialized = true;
       
-      // Load ads in background (non-blocking, with error handling)
+      // Load interstitial and rewarded ads in background (non-blocking)
       setTimeout(() => {
         try {
           this.loadInterstitialAd();
@@ -61,12 +63,13 @@ class AdMobService {
         } catch (loadError) {
           console.warn('⚠️ Error loading initial ads (non-critical):', loadError.message);
         }
-      }, 2000);
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Error initializing AdMobService:', error.message);
+      console.error('Stack trace:', error.stack);
       this.initializationFailed = true;
-      // Mark as initialized anyway to prevent retry loops
+      // Don't set isInitialized to true on error
       this.isInitialized = false;
     } finally {
       this.isInitializing = false;
