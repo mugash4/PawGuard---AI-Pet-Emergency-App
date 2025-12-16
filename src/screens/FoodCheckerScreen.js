@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
     position: 'absolute',
     right: 20,
-    bottom: 90,
+    bottom: 100,
     width: 60,
     height: 60,
     borderRadius: 30,

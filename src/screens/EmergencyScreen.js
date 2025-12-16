@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
   position: 'absolute',
   right: 20,
-  bottom: 90, // Above tab bar
+  bottom: 100, // Above tab bar
   width: 60,
   height: 60,
   borderRadius: 30,

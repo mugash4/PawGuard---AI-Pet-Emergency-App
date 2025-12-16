@@ -1,15 +1,14 @@
 /**
- * AI Service - Multi-LLM Support with SIMPLIFIED API Key Handling
+ * AI Service - Multi-LLM Support with API Key Decryption
  * Supports DeepSeek, OpenAI, and OpenRouter APIs
- * CRITICAL FIX: Better encryption handling with detailed logging
+ * Secure API key management via Firebase with CryptoJS decryption
  */
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db, waitForAuth } from './firebase';
 import CryptoJS from 'crypto-js';
 
-// CRITICAL FIX: Decryption key for API keys stored in Firebase
-// This should match the encryption key used in your admin panel
+// CRITICAL: This must match the encryption key in admin-panel/components/APIKeyManager.js
 const DECRYPTION_KEY = 'pawguard-super-secret-key-2024';
 
 /**
@@ -19,49 +18,35 @@ const DECRYPTION_KEY = 'pawguard-super-secret-key-2024';
  */
 function decryptApiKey(encryptedKey) {
   try {
-    if (!encryptedKey || encryptedKey.trim() === '') {
-      console.error('❌ Empty API key provided');
+    if (!encryptedKey) {
       throw new Error('Empty API key');
     }
 
-    // Check if key is already plain text (starts with common API key prefixes)
-    const plainTextPrefixes = ['sk-', 'key-', 'Bearer ', 'api-'];
-    const isPlainText = plainTextPrefixes.some(prefix => encryptedKey.startsWith(prefix));
-    
-    if (isPlainText) {
-      console.log('✅ Using plain text API key (detected prefix)');
-      return encryptedKey.trim();
+    // Check if key is already in plain text (for testing)
+    if (encryptedKey.startsWith('sk-') || encryptedKey.startsWith('ca-app-pub')) {
+      console.log('✅ Using plain text API key (not encrypted)');
+      return encryptedKey;
     }
 
-    // Check if it looks like encrypted text (contains 'U2FsdGVk' which is base64 for 'Salted')
+    // Check if it looks like an encrypted string
     if (!encryptedKey.includes('U2FsdGVk')) {
-      // Might be plain text without prefix
-      console.log('✅ Using plain text API key (no encryption signature)');
-      return encryptedKey.trim();
+      console.log('⚠️ Key does not appear to be encrypted, using as-is');
+      return encryptedKey;
     }
 
-    // Attempt decryption
-    console.log('🔓 Attempting to decrypt API key...');
+    // Decrypt using CryptoJS
     const bytes = CryptoJS.AES.decrypt(encryptedKey, DECRYPTION_KEY);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     
-    if (!decrypted || decrypted.trim() === '') {
-      console.error('❌ Decryption resulted in empty string');
-      console.error('This usually means the encryption key is wrong');
-      // Try returning original key as last resort
-      console.log('⚠️ Using original key as fallback');
-      return encryptedKey.trim();
+    if (!decrypted || decrypted.length === 0) {
+      throw new Error('Decryption resulted in empty string');
     }
 
     console.log('✅ API key decrypted successfully');
-    console.log(`Key length: ${decrypted.length} characters`);
-    return decrypted.trim();
+    return decrypted;
   } catch (error) {
     console.error('❌ API key decryption error:', error.message);
-    console.error('Stack:', error.stack);
-    // Return the original key if decryption fails
-    console.log('⚠️ Returning original key due to error');
-    return encryptedKey.trim();
+    throw new Error(`Failed to decrypt API key: ${error.message}`);
   }
 }
 
@@ -71,114 +56,91 @@ function decryptApiKey(encryptedKey) {
  */
 async function getApiKeys() {
   try {
-    console.log('');
-    console.log('═══════════════════════════════════');
-    console.log('🔑 FETCHING API KEYS FROM FIREBASE');
-    console.log('═══════════════════════════════════');
-    
     // Wait for authentication to complete
     console.log('⏳ Waiting for Firebase auth...');
     await waitForAuth();
-    console.log('✅ Firebase auth ready');
     
     // Ensure db is available
     if (!db) {
-      throw new Error('Firebase database not initialized. Please check your Firebase configuration in src/services/firebase.js');
+      throw new Error('Firebase database not initialized. Check Firebase configuration in src/services/firebase.js');
     }
     
-    console.log('📡 Fetching from Firestore: config/apiKeys');
+    console.log('🔍 Fetching API keys from Firebase Firestore...');
     
     // Get API keys from Firebase
     const configDoc = await getDoc(doc(db, 'config', 'apiKeys'));
     
     if (!configDoc.exists()) {
-      console.error('❌ Document config/apiKeys does NOT exist!');
-      console.error('');
-      console.error('SETUP INSTRUCTIONS:');
-      console.error('1. Open Firebase Console: https://console.firebase.google.com');
-      console.error('2. Select your project: pawguard-ee74c');
-      console.error('3. Go to Firestore Database');
-      console.error('4. Create collection: "config"');
-      console.error('5. Create document with ID: "apiKeys"');
-      console.error('6. Add field: "deepseek" with your DeepSeek API key');
-      console.error('   (Get key from: https://platform.deepseek.com)');
-      console.error('');
-      throw new Error('API keys not configured in Firebase. See console for setup instructions.');
+      throw new Error(
+        '❌ API keys document not found in Firestore!\n\n' +
+        'SETUP REQUIRED:\n' +
+        '1. Open admin-panel folder\n' +
+        '2. Run: npm install && npm run dev\n' +
+        '3. Login to admin panel\n' +
+        '4. Add your DeepSeek API key\n' +
+        '5. Save the configuration\n\n' +
+        'OR manually create:\n' +
+        'Collection: config\n' +
+        'Document: apiKeys\n' +
+        'Fields: { deepseek: "your-api-key-here" }'
+      );
     }
 
     const data = configDoc.data();
-    console.log('✅ Document retrieved');
-    console.log('📦 Available fields:', Object.keys(data));
+    console.log('📦 Retrieved API keys document');
+    console.log('📋 Available fields:', Object.keys(data));
     
-    // Log field values (first 10 chars only for security)
-    Object.keys(data).forEach(key => {
-      const value = data[key];
-      if (typeof value === 'string') {
-        console.log(`   - ${key}: "${value.substring(0, 10)}..." (${value.length} chars)`);
-      } else {
-        console.log(`   - ${key}: ${typeof value}`);
-      }
-    });
-    
-    // CRITICAL FIX: Decrypt all API keys before use
+    // Decrypt API keys
     const decryptedKeys = {};
     
+    // Try DeepSeek
     if (data.deepseek) {
       try {
-        console.log('🔓 Decrypting DeepSeek key...');
         decryptedKeys.deepseek = decryptApiKey(data.deepseek);
-        console.log('✅ DeepSeek API key ready');
+        console.log('✅ DeepSeek API key loaded and decrypted');
       } catch (error) {
-        console.error('⚠️ DeepSeek key decryption failed:', error.message);
+        console.warn('⚠️ DeepSeek key decryption failed:', error.message);
       }
-    } else {
-      console.warn('⚠️ No "deepseek" field found');
     }
     
+    // Try OpenAI
     if (data.openai) {
       try {
-        console.log('🔓 Decrypting OpenAI key...');
         decryptedKeys.openai = decryptApiKey(data.openai);
-        console.log('✅ OpenAI API key ready');
+        console.log('✅ OpenAI API key loaded and decrypted');
       } catch (error) {
         console.warn('⚠️ OpenAI key decryption failed:', error.message);
       }
     }
     
+    // Try OpenRouter
     if (data.openrouter) {
       try {
-        console.log('🔓 Decrypting OpenRouter key...');
         decryptedKeys.openrouter = decryptApiKey(data.openrouter);
-        console.log('✅ OpenRouter API key ready');
+        console.log('✅ OpenRouter API key loaded and decrypted');
       } catch (error) {
         console.warn('⚠️ OpenRouter key decryption failed:', error.message);
       }
     }
     
-    // Check if at least one key is available
+    // Check if at least one valid AI key is available
     if (!decryptedKeys.deepseek && !decryptedKeys.openai && !decryptedKeys.openrouter) {
-      console.error('❌ No valid AI API keys found!');
-      console.error('Available fields in document:', Object.keys(data).join(', '));
-      console.error('Expected fields: deepseek, openai, or openrouter');
-      console.error('');
-      throw new Error('No AI API keys configured. Please add "deepseek", "openai", or "openrouter" field to config/apiKeys document in Firebase.');
+      const availableFields = Object.keys(data).join(', ');
+      throw new Error(
+        '❌ No valid AI API keys found in Firestore!\n\n' +
+        `Available fields in document: ${availableFields}\n\n` +
+        'REQUIRED: At least one of:\n' +
+        '• deepseek (recommended)\n' +
+        '• openai\n' +
+        '• openrouter\n\n' +
+        'Please use the admin panel to add API keys.'
+      );
     }
     
-    console.log('═══════════════════════════════════');
-    console.log('✅ API KEYS LOADED SUCCESSFULLY');
-    console.log('═══════════════════════════════════');
-    console.log('');
-    
+    console.log('✅ API keys ready for use');
     return decryptedKeys;
   } catch (error) {
-    console.error('');
-    console.error('═══════════════════════════════════');
-    console.error('❌ FAILED TO GET API KEYS');
-    console.error('═══════════════════════════════════');
-    console.error('Error:', error.message);
-    console.error('Stack:', error.stack);
-    console.error('═══════════════════════════════════');
-    console.error('');
+    console.error('❌ Error loading API keys:', error);
     throw error;
   }
 }
@@ -215,48 +177,39 @@ export const callAI = async (message, context = 'user') => {
  */
 async function callDeepSeek(message, apiKey) {
   console.log('🤖 Calling DeepSeek API...');
-  console.log(`📝 Message length: ${message.length} characters`);
   
-  try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
+  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    })
+  });
 
-    console.log(`📡 DeepSeek API response status: ${response.status}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ DeepSeek API error response:', errorText);
-      throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ DeepSeek response received');
-    console.log(`📝 Response length: ${data.choices[0].message.content.length} characters`);
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('❌ DeepSeek API call failed:', error.message);
-    throw error;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ DeepSeek API error:', errorText);
+    throw new Error(`DeepSeek API error (${response.status}): ${errorText}`);
   }
+
+  const data = await response.json();
+  console.log('✅ DeepSeek response received');
+  return data.choices[0].message.content;
 }
 
 /**
@@ -265,90 +218,80 @@ async function callDeepSeek(message, apiKey) {
 async function callOpenAI(message, apiKey) {
   console.log('🤖 Calling OpenAI API...');
   
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    })
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ OpenAI response received');
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('❌ OpenAI API call failed:', error.message);
-    throw error;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ OpenAI API error:', errorText);
+    throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
   }
+
+  const data = await response.json();
+  console.log('✅ OpenAI response received');
+  return data.choices[0].message.content;
 }
 
 /**
- * Call OpenRouter API (supports 100+ models)
+ * Call OpenRouter API
  */
 async function callOpenRouter(message, apiKey) {
   console.log('🤖 Calling OpenRouter API...');
   
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://pawguard.app',
-        'X-Title': 'PawGuard Pet Emergency App'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://pawguard.app',
+      'X-Title': 'PawGuard Pet Emergency App'
+    },
+    body: JSON.stringify({
+      model: 'anthropic/claude-3-haiku',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful pet care assistant specialized in dog health and emergencies. Provide brief, accurate, actionable advice. Always prioritize pet safety and recommend veterinary consultation when necessary.'
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    })
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ OpenRouter API error:', errorText);
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ OpenRouter response received');
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('❌ OpenRouter API call failed:', error.message);
-    throw error;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ OpenRouter API error:', errorText);
+    throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
   }
+
+  const data = await response.json();
+  console.log('✅ OpenRouter response received');
+  return data.choices[0].message.content;
 }
 
 /**
@@ -370,10 +313,10 @@ Keep it brief and actionable.`;
     console.log(`🍖 Checking food safety for: ${foodName}`);
     const response = await callAI(prompt, 'user');
     
-    // Try to parse JSON response
+    // Parse JSON response
     try {
-      // Clean up response - remove markdown code blocks if present
       let cleanedResponse = response.trim();
+      // Remove markdown code blocks
       if (cleanedResponse.startsWith('```json')) {
         cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       } else if (cleanedResponse.startsWith('```')) {
@@ -384,19 +327,17 @@ Keep it brief and actionable.`;
       console.log('✅ Food safety check successful');
       return parsed;
     } catch (parseError) {
-      // If JSON parsing fails, extract structured data from text
-      console.warn('⚠️ JSON parse failed, extracting from text');
-      console.log('Response was:', response);
+      console.warn('⚠️ JSON parse failed, creating structured fallback');
       
-      // Fallback: create structured response
+      // Fallback
       return {
-        safetyLevel: response.toLowerCase().includes('toxic') || response.toLowerCase().includes('dangerous') || response.toLowerCase().includes('poisonous') ? 'toxic' :
-                     response.toLowerCase().includes('caution') || response.toLowerCase().includes('careful') || response.toLowerCase().includes('moderation') ? 'caution' : 'safe',
-        emoji: response.toLowerCase().includes('toxic') || response.toLowerCase().includes('dangerous') ? '☠️' : 
-               response.toLowerCase().includes('caution') || response.toLowerCase().includes('careful') ? '⚠️' : '✅',
+        safetyLevel: response.toLowerCase().includes('toxic') || response.toLowerCase().includes('dangerous') ? 'toxic' :
+                     response.toLowerCase().includes('caution') || response.toLowerCase().includes('careful') ? 'caution' : 'safe',
+        emoji: response.toLowerCase().includes('toxic') ? '☠️' : 
+               response.toLowerCase().includes('caution') ? '⚠️' : '✅',
         shortExplanation: response.substring(0, 200) + '...',
         symptoms: [],
-        advice: 'Consult with your veterinarian for specific guidance about your pet.'
+        advice: 'Consult with your veterinarian for specific guidance.'
       };
     }
   } catch (error) {
@@ -406,8 +347,7 @@ Keep it brief and actionable.`;
 };
 
 /**
- * AI Chat for emergencies - FIXED VERSION
- * Now correctly handles conversation history
+ * AI Chat for emergencies
  */
 export const chatWithAI = async (message, conversationHistory = []) => {
   const systemPrompt = `You are a helpful pet emergency assistant for dog owners. Provide clear, concise, actionable advice for pet emergencies and general care questions. Always prioritize pet safety and recommend veterinary consultation when necessary.
@@ -422,25 +362,18 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
     // Get decrypted API keys
     const apiKeys = await getApiKeys();
 
-    // Build conversation context
+    // Build messages
     const messages = [
       { role: 'system', content: systemPrompt }
     ];
 
-    // FIXED: Handle both message formats (from KnowledgeScreen and AIChatScreen)
-    // Add conversation history (last 10 messages to keep context manageable)
+    // Add conversation history (last 10 messages)
     if (conversationHistory && conversationHistory.length > 0) {
       const recentHistory = conversationHistory.slice(-10);
       recentHistory.forEach(msg => {
-        // Handle different message formats
         if (msg.role) {
-          // Format from KnowledgeScreen: {role: 'user' | 'assistant', content: string}
-          messages.push({
-            role: msg.role,
-            content: msg.content
-          });
+          messages.push({ role: msg.role, content: msg.content });
         } else if (msg.isBot !== undefined) {
-          // Format from AIChatScreen: {isBot: boolean, text: string}
           messages.push({
             role: msg.isBot ? 'assistant' : 'user',
             content: msg.text
@@ -454,7 +387,7 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
 
     console.log(`📨 Sending ${messages.length} messages to AI`);
 
-    // Call appropriate API with decrypted key
+    // Call API
     let response;
     if (apiKeys.deepseek) {
       console.log('🤖 Using DeepSeek API');
@@ -510,7 +443,7 @@ Keep responses brief (2-4 sentences) unless more detail is specifically requeste
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ AI API error:', errorText);
-      throw new Error(`AI API error: ${response.status} - ${errorText}`);
+      throw new Error(`AI API error (${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
@@ -542,7 +475,6 @@ Be concise and prioritize safety.`;
     const response = await callAI(prompt, 'user');
     
     try {
-      // Clean up response - remove markdown code blocks if present
       let cleanedResponse = response.trim();
       if (cleanedResponse.startsWith('```json')) {
         cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -554,12 +486,12 @@ Be concise and prioritize safety.`;
       console.log('✅ Symptom analysis successful');
       return parsed;
     } catch (parseError) {
-      console.warn('⚠️ JSON parse failed for symptoms, using fallback');
+      console.warn('⚠️ JSON parse failed, using fallback');
       return {
         urgency: 'urgent',
         possibleConditions: ['Unknown condition - requires veterinary examination'],
-        immediateActions: ['Contact veterinarian immediately', 'Keep pet calm and comfortable', 'Monitor symptoms closely'],
-        whenToSeeVet: 'As soon as possible - within the next few hours'
+        immediateActions: ['Contact veterinarian immediately', 'Keep pet calm', 'Monitor symptoms'],
+        whenToSeeVet: 'As soon as possible'
       };
     }
   } catch (error) {
@@ -569,7 +501,7 @@ Be concise and prioritize safety.`;
 };
 
 /**
- * Check and decrement AI query limit for free users
+ * Check query limit for free users
  */
 export const checkQueryLimit = async (userId, isPremium) => {
   if (isPremium) {
@@ -577,16 +509,13 @@ export const checkQueryLimit = async (userId, isPremium) => {
   }
 
   try {
-    // Wait for authentication to complete
     await waitForAuth();
     
-    // Ensure db is available
     if (!db) {
       console.warn('⚠️ Firebase not initialized, allowing query');
       return { allowed: true, remaining: 5 };
     }
     
-    // Check daily limit (5 queries for free users)
     const today = new Date().toISOString().split('T')[0];
     const queryDocRef = doc(db, 'aiQueries', `${userId}_${today}`);
     const queryDoc = await getDoc(queryDocRef);
@@ -600,7 +529,6 @@ export const checkQueryLimit = async (userId, isPremium) => {
     return { allowed: true, remaining: 5 - currentCount };
   } catch (error) {
     console.error('❌ Error checking query limit:', error);
-    // On error, allow the query but return cautious remaining count
     return { allowed: true, remaining: 5 };
   }
 };
@@ -610,12 +538,10 @@ export const checkQueryLimit = async (userId, isPremium) => {
  */
 export const trackQueryUsage = async (userId) => {
   try {
-    // Wait for authentication to complete
     await waitForAuth();
     
-    // Ensure db is available
     if (!db) {
-      console.warn('⚠️ Firebase not initialized, skipping usage tracking');
+      console.warn('⚠️ Firebase not initialized, skipping tracking');
       return;
     }
     
@@ -635,6 +561,5 @@ export const trackQueryUsage = async (userId) => {
     console.log(`✅ Query usage tracked: ${currentCount + 1}/5`);
   } catch (error) {
     console.error('❌ Error tracking query usage:', error);
-    // Don't throw - tracking is not critical
   }
 };

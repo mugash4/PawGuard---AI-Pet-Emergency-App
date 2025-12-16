@@ -30,6 +30,12 @@ function HomeStack() {
 export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
 
+  // Calculate tab bar height dynamically
+  const tabBarHeight = Platform.select({
+    ios: 50 + insets.bottom,
+    android: 60 + Math.max(insets.bottom, 8),
+  });
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -53,17 +59,12 @@ export default function MainTabNavigator() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textLight,
         tabBarStyle: {
-          // FIXED: Proper safe area handling to prevent overlap with system nav bar
           paddingBottom: Platform.select({
-            ios: insets.bottom, // iOS uses safe area directly
-            android: Math.max(insets.bottom, 8), // Android: at least 8px padding
+            ios: insets.bottom,
+            android: Math.max(insets.bottom, 8),
           }),
           paddingTop: 8,
-          // FIXED: Height calculation to account for safe area
-          height: Platform.select({
-            ios: 50 + insets.bottom, // iOS: tab height + safe area
-            android: 60 + Math.max(insets.bottom, 8), // Android: tab height + padding
-          }),
+          height: tabBarHeight,
           backgroundColor: COLORS.surface,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
@@ -72,7 +73,6 @@ export default function MainTabNavigator() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
-          // FIXED: Position above system navigation
           position: 'absolute',
           bottom: 0,
           left: 0,
@@ -83,6 +83,8 @@ export default function MainTabNavigator() {
           fontWeight: '600',
         },
         headerShown: false,
+        // FIXED: Pass tab bar height to screens
+        tabBarHeight: tabBarHeight,
       })}
     >
       <Tab.Screen 

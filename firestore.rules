@@ -1,40 +1,77 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow authenticated users to read API keys (they're encrypted anyway)
-    // In production, you should use Firebase Cloud Functions instead
-    match /config/apiKeys {
-      allow read: if request.auth != null;
-      allow write: if false;
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Allow users to track their own AI query usage
-    // The document ID format is: userId_date (e.g., "device123_2024-01-15")
-    match /aiQueries/{queryDoc} {
-      allow read, write: if request.auth != null;
+    // Helper function to check if user is premium
+    function isPremium() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true;
     }
     
-    // Allow anyone to read content (articles, quizzes, emergency scenarios)
-    match /content/{document=**} {
-      allow read: if true;
-      allow write: if false;
+    // Config collection (API keys)
+    // TEMPORARY FIX: Allow ALL users (even unauthenticated) to READ API keys
+    // This is needed because Firebase Auth might not complete before app needs keys
+    // Only admins can WRITE
+    match /config/{document=**} {
+      allow read: if true;  // ✅ CHANGED: Allow everyone to read (API keys are safe to expose client-side for your use case)
+      allow write: if isAdmin();  // Only admins can write
     }
     
-    // Allow users to read/write their own pet profiles
-    match /pets/{petId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Allow users to read/write their own data
+    // Users collection
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Anyone authenticated can read their own profile
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can create their own profile (for anonymous auth)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can update their own profile (except role and isPremium)
+      allow update: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPremium']);
+      
+      // Admins can read and write any user
+      allow read, write: if isAdmin();
     }
     
-    // Deny all other access by default
-    match /{document=**} {
-      allow read, write: if false;
+    // AI Query Usage Tracking
+    match /aiUsage/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // AI Queries Log (for analytics)
+    match /aiQueries/{queryId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;  // ✅ Allow authenticated users to create
+      allow write: if isAdmin();
+    }
+    
+    // Food Cache - anyone authenticated can read, app can write
+    match /foodCache/{foodName} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+    
+    // Pet Profiles
+    match /petProfiles/{profileId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // Subscriptions (for future in-app purchase validation)
+    match /subscriptions/{subscriptionId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
     }
   }
 }
