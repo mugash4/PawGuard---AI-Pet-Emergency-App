@@ -37,6 +37,16 @@ export default function AppNavigator() {
         </>
       ) : null}
       <Stack.Screen name="Main" component={MainTabNavigator} />
+      {/* CRITICAL FIX: Add Subscription screen here so it's accessible after onboarding */}
+      <Stack.Screen 
+        name="Subscription" 
+        component={SubscriptionScreen}
+        options={{
+          presentation: 'modal', // Makes it appear as overlay
+          gestureEnabled: true,
+          cardOverlayEnabled: true,
+        }}
+      />
     </Stack.Navigator>
   );
 }

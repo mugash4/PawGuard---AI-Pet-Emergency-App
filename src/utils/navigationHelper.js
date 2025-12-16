@@ -1,9 +1,11 @@
 /**
  * Navigation Helper - Handles upgrade navigation with connectivity check
+ * FIXED: Compatible with React Navigation v6 and nested navigators
  */
 
 import NetInfo from '@react-native-community/netinfo';
 import { Alert } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 
 /**
  * Navigate to Subscription screen with connectivity check and error handling
@@ -58,56 +60,21 @@ export const navigateToSubscription = async (navigation, options = {}) => {
     // Step 3: Navigate to Subscription screen
     console.log('🚀 Navigating to Subscription screen...');
 
-    // Try multiple navigation methods for compatibility
-    let navigationSuccess = false;
-
-    // Method 1: Direct navigate (for screens in same navigator)
-    if (navigation.navigate) {
-      try {
-        navigation.navigate('Subscription');
-        navigationSuccess = true;
-        console.log('✅ Navigation successful (direct)');
-      } catch (navError) {
-        console.warn('⚠️ Direct navigation failed, trying parent navigator...');
-      }
-    }
-
-    // Method 2: Parent navigator (for nested navigators - tab screens)
-    if (!navigationSuccess && navigation.getParent) {
-      try {
-        const parentNav = navigation.getParent();
-        if (parentNav && parentNav.navigate) {
-          parentNav.navigate('Subscription');
-          navigationSuccess = true;
-          console.log('✅ Navigation successful (parent navigator)');
-        }
-      } catch (navError) {
-        console.warn('⚠️ Parent navigation failed, trying root navigator...');
-      }
-    }
-
-    // Method 3: Root navigator (navigate to root stack)
-    if (!navigationSuccess && navigation.dangerouslyGetParent) {
-      try {
-        let rootNav = navigation;
-        while (rootNav.dangerouslyGetParent()) {
-          rootNav = rootNav.dangerouslyGetParent();
-        }
-        if (rootNav && rootNav.navigate) {
-          rootNav.navigate('Subscription');
-          navigationSuccess = true;
-          console.log('✅ Navigation successful (root navigator)');
-        }
-      } catch (navError) {
-        console.error('❌ Root navigation failed:', navError);
-      }
-    }
-
-    if (navigationSuccess) {
+    // CRITICAL FIX: Use CommonActions.navigate for cross-navigator navigation
+    // This works from any nested navigator (like tabs) to root stack screens
+    try {
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Subscription',
+        })
+      );
+      console.log('✅ Navigation dispatched successfully');
+      
       if (onSuccess) onSuccess();
       return true;
-    } else {
-      throw new Error('All navigation methods failed');
+    } catch (navError) {
+      console.error('❌ Navigation dispatch failed:', navError);
+      throw navError;
     }
 
   } catch (error) {
@@ -161,8 +128,8 @@ export const isNavigationValid = (navigation) => {
     return false;
   }
 
-  if (!navigation.navigate && !navigation.getParent) {
-    console.warn('⚠️ Navigation object missing navigate methods');
+  if (!navigation.navigate && !navigation.dispatch) {
+    console.warn('⚠️ Navigation object missing required methods');
     return false;
   }
 

@@ -252,7 +252,7 @@ export const getEmergencyScenarios = async () => {
   }
   
   // Return complete offline data
-  return COMPLETE_EMERGENCY_scenarios;
+  return COMPLETE_EMERGENCY_SCENARIOS;
 };
 
 /**

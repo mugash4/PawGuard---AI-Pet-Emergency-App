@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,14 +12,39 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useUser } from '../context/UserContext';
 import AdBanner from '../components/AdBanner';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
+import { getDailyTip } from '../services/contentService'; // ✅ ADDED: Import getDailyTip
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useUser();
   const tabBarHeight = useBottomTabBarHeight();
+  
+  // ✅ ADDED: State for daily tip
+  const [dailyTip, setDailyTip] = useState(null);
 
   // Track navigation for interstitial ads (free users only)
   useInterstitialAd(navigation);
+
+  // ✅ ADDED: Load daily tip on mount
+  useEffect(() => {
+    loadDailyTip();
+  }, []);
+
+  // ✅ ADDED: Function to load daily tip
+  const loadDailyTip = async () => {
+    try {
+      const tip = await getDailyTip();
+      setDailyTip(tip);
+    } catch (error) {
+      console.error('Error loading daily tip:', error);
+      // Fallback tip if loading fails
+      setDailyTip({
+        title: 'Stay Alert 👀',
+        content: 'Keep emergency vet numbers saved in your phone and posted at home.',
+        emoji: '👀'
+      });
+    }
+  };
 
   // Navigate to specific emergency scenarios
   const navigateToEmergency = (scenarioType) => {
@@ -28,8 +53,17 @@ export default function HomeScreen({ navigation }) {
 
   // ✅ FIXED: Handle upgrade button press with connectivity check
   const handleUpgradePress = async () => {
-    const { navigateToSubscription } = await import('../utils/navigationHelper');
-    await navigateToSubscription(navigation);
+    try {
+      const { navigateToSubscription } = await import('../utils/navigationHelper');
+      await navigateToSubscription(navigation);
+    } catch (error) {
+      console.error('Error importing navigation helper:', error);
+      Alert.alert(
+        'Error',
+        'Unable to open subscription screen. Please try restarting the app.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
 
@@ -54,17 +88,17 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
-        {/* Tip of the Day Card */}
-        <View style={styles.tipCard}>
-          <View style={styles.tipHeader}>
-            <Ionicons name="bulb" size={24} color={COLORS.warning} />
-            <Text style={styles.tipLabel}>Tip of the Day</Text>
+        {/* ✅ FIXED: Tip of the Day Card - Now uses dynamic content */}
+        {dailyTip && (
+          <View style={styles.tipCard}>
+            <View style={styles.tipHeader}>
+              <Ionicons name="bulb" size={24} color={COLORS.warning} />
+              <Text style={styles.tipLabel}>Tip of the Day</Text>
+            </View>
+            <Text style={styles.tipTitle}>{dailyTip.title}</Text>
+            <Text style={styles.tipText}>{dailyTip.content}</Text>
           </View>
-          <Text style={styles.tipTitle}>Avoid Grapes 🍇</Text>
-          <Text style={styles.tipText}>
-            Grapes can cause kidney failure - even small amounts are dangerous for dogs.
-          </Text>
-        </View>
+        )}
 
         {/* AdMob Banner - Integrated in content */}
         {!user?.isPremium && <AdBanner />}
