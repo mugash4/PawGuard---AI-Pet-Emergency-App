@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
   position: 'absolute',
   right: 20,
-  bottom: 100, // Above tab bar
+  bottom: 120, // Above tab bar
   width: 60,
   height: 60,
   borderRadius: 30,
@@ -614,6 +614,7 @@ const styles = StyleSheet.create({
       elevation: 8,
     },
   }),
+  zIndex: 1000,  // ✅ ADDED: Ensure button stays on top
 },
 
 });

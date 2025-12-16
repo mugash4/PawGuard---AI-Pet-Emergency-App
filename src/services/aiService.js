@@ -4,7 +4,7 @@
  * Secure API key management via Firebase with CryptoJS decryption
  */
 
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore'; // ✅ FIXED: Added setDoc import
 import { db, waitForAuth } from './firebase';
 import CryptoJS from 'crypto-js';
 
@@ -551,6 +551,7 @@ export const trackQueryUsage = async (userId) => {
     
     const currentCount = queryDoc.exists() ? queryDoc.data().count : 0;
     
+    // ✅ FIXED: Now setDoc is properly imported
     await setDoc(queryRef, {
       count: currentCount + 1,
       date: today,

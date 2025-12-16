@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
     position: 'absolute',
     right: 20,
-    bottom: 100,
+    bottom: 120,  // ✅ FIXED: Increased from 100 to 120 to clear tab bar
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -888,6 +888,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...SHADOWS.large,
     elevation: 8,
+    zIndex: 1000,  // ✅ ADDED: Ensure button stays on top
   },
   modalContainer: {
     flex: 1,
