@@ -13,6 +13,7 @@ import FoodCheckerScreen from '../screens/FoodCheckerScreen';
 import KnowledgeScreen from '../screens/KnowledgeScreen';
 import PetProfileScreen from '../screens/PetProfileScreen';
 import AIChatScreen from '../screens/AIChatScreen';
+import ContactSupportScreen from '../screens/ContactSupportScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -111,6 +112,11 @@ export default function MainTabNavigator() {
         name="Profile" 
         component={PetProfileScreen}
         options={{ title: 'My Pet' }}
+      />
+      <Tab.Screen 
+        name="ContactSupport" 
+        component={ContactSupportScreen}
+        options={{ headerShown: false }}
       />
     </Tab.Navigator>
   );

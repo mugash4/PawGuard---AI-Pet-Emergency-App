@@ -343,6 +343,14 @@ export default function PetProfileScreen({ navigation }) {
               <Ionicons name="medical" size={24} color="#FFFFFF" />
               <Text style={styles.emergencyButtonText}>First Aid Guide</Text>
             </TouchableOpacity>
+         
+            <TouchableOpacity
+              style={[styles.emergencyButton, { backgroundColor: '#2196F3' }]}
+              onPress={() => navigation.navigate('ContactSupport')}
+            >
+            <Ionicons name="headset" size={24} color="#FFFFFF" />
+            <Text style={styles.emergencyButtonText}>Contact Support</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -855,15 +863,16 @@ const styles = StyleSheet.create({
   },
   emergencyButtons: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   emergencyButton: {
-    flex: 1,
+    flexBasis: '48%',
     backgroundColor: '#FF3B30',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    padding: 10,
     borderRadius: BORDER_RADIUS.md,
     gap: 6,
   },

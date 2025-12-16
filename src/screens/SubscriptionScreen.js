@@ -313,7 +313,7 @@ export default function SubscriptionScreen({ navigation, route }) {
             'Multi-Pet Profiles',
             'Offline Mode (Full Database)',
             'No Ads',
-            'Priority Support',
+            'Priority Support (24/7 AI + Human)',
           ].map((feature, index) => (
             <View key={index} style={styles.featureRow}>
               <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
