@@ -28,6 +28,16 @@ function HomeStack() {
   );
 }
 
+// CRITICAL FIX: Pet Profile Stack (includes Contact Support)
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="PetProfileMain" component={PetProfileScreen} />
+      <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
 
@@ -84,7 +94,6 @@ export default function MainTabNavigator() {
           fontWeight: '600',
         },
         headerShown: false,
-        // FIXED: Pass tab bar height to screens
         tabBarHeight: tabBarHeight,
       })}
     >
@@ -110,13 +119,8 @@ export default function MainTabNavigator() {
       />
       <Tab.Screen 
         name="Profile" 
-        component={PetProfileScreen}
+        component={ProfileStack}
         options={{ title: 'My Pet' }}
-      />
-      <Tab.Screen 
-        name="ContactSupport" 
-        component={ContactSupportScreen}
-        options={{ headerShown: false }}
       />
     </Tab.Navigator>
   );

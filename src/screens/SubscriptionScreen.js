@@ -307,14 +307,14 @@ export default function SubscriptionScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* CRITICAL FIX: Close Button - Added activeOpacity and better touch target */}
+        {/* CRITICAL FIX: Close Button - Better touch properties */}
         <TouchableOpacity 
           style={styles.closeButton} 
           onPress={handleClose}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.6}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="close" size={28} color={COLORS.textSecondary} />
+          <Ionicons name="close" size={30} color={COLORS.text} />
         </TouchableOpacity>
 
         {/* Header */}
@@ -412,12 +412,12 @@ export default function SubscriptionScreen({ navigation, route }) {
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
 
-        {/* CRITICAL FIX: Continue Free Button - Added activeOpacity and better touch target */}
+        {/* CRITICAL FIX: Continue Free Button - Better touch properties */}
         <TouchableOpacity 
           style={styles.freeButton} 
           onPress={handleContinueFree}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.6}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
           <Text style={styles.freeButtonText}>Continue with Free Plan</Text>
           <Text style={styles.freeButtonSubtext}>(5 AI searches/day, ads included)</Text>
@@ -455,8 +455,9 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 10,
     padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 22,
+    ...SHADOWS.small,
   },
   header: {
     paddingHorizontal: SPACING.xl,
@@ -619,17 +620,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: SPACING.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.border,
   },
   freeButtonText: {
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
     fontWeight: '600',
   },
   freeButtonSubtext: {
     fontSize: FONTS.sizes.xs,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     marginTop: 4,
   },
   termsText: {
