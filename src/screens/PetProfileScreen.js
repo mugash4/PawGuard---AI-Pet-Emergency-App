@@ -329,29 +329,32 @@ export default function PetProfileScreen({ navigation }) {
         <View style={styles.emergencySection}>
           <Text style={styles.emergencySectionTitle}>🚨 Emergency Help</Text>
           <View style={styles.emergencyButtons}>
-            <TouchableOpacity
-              style={styles.emergencyButton}
-              onPress={findNearbyVets}
-            >
-              <Ionicons name="location" size={24} color="#FFFFFF" />
-              <Text style={styles.emergencyButtonText}>Find Nearby Vets</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.emergencyButton, styles.emergencyButtonSecondary]}
-              onPress={() => navigation.navigate('Emergency')}
-            >
-              <Ionicons name="medical" size={24} color="#FFFFFF" />
-              <Text style={styles.emergencyButtonText}>First Aid Guide</Text>
-            </TouchableOpacity>
-         
-            <TouchableOpacity
-              style={[styles.emergencyButton, { backgroundColor: '#2196F3' }]}
-              onPress={() => navigation.navigate('ContactSupport')}
-            >
-            <Ionicons name="headset" size={24} color="#FFFFFF" />
-            <Text style={styles.emergencyButtonText}>Contact Support</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.emergencyButton}
+            onPress={findNearbyVets}
+            activeOpacity={0.8}
+          >
+          <Ionicons name="location" size={22} color="#FFFFFF" />
+            <Text style={styles.emergencyButtonText}>Find Nearby{'\n'}Vets</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.emergencyButton, styles.emergencyButtonSecondary]}
+            onPress={() => navigation.navigate('Emergency')}
+            activeOpacity={0.8}
+          >
+          <Ionicons name="medical" size={22} color="#FFFFFF" />
+            <Text style={styles.emergencyButtonText}>First Aid{'\n'}Guide</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.emergencyButton, { backgroundColor: '#2196F3' }]}
+            onPress={() => navigation.navigate('ContactSupport')}
+            activeOpacity={0.8}
+          >
+          <Ionicons name="headset" size={22} color="#FFFFFF" />
+            <Text style={styles.emergencyButtonText}>Contact{'\n'}Support</Text>
+          </TouchableOpacity>
+        </View>
+
         </View>
 
         {/* Add Pet Button */}
@@ -867,22 +870,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emergencyButton: {
-    flexBasis: '48%',
+    flexBasis: '31%',  // Changed from 48% to 31% for 3 buttons per row
     backgroundColor: '#FF3B30',
-    flexDirection: 'row',
+    flexDirection: 'column',  // Changed from row to column
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
+    paddingVertical: 12,  // Increased padding
+    paddingHorizontal: 8,
     borderRadius: BORDER_RADIUS.md,
-    gap: 6,
+    gap: 4,
+    minHeight: 70,  // Ensure consistent height
   },
   emergencyButtonSecondary: {
     backgroundColor: COLORS.primary,
   },
   emergencyButtonText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 11,  // Slightly reduced
     fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,  // Added for better line spacing
   },
   addButton: {
     flexDirection: 'row',
