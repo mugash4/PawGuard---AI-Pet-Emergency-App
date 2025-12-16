@@ -24,6 +24,17 @@ export default function AppNavigator() {
     }
   };
 
+  // CRITICAL FIX: Listen for onboarding completion changes
+  useEffect(() => {
+    const subscription = AsyncStorage.addListener?.('change', (data) => {
+      if (data?.hasCompletedOnboarding === 'true') {
+        setHasCompletedOnboarding(true);
+      }
+    });
+
+    return () => subscription?.remove?.();
+  }, []);
+
   if (hasCompletedOnboarding === null) {
     return null; // Loading
   }
@@ -33,12 +44,19 @@ export default function AppNavigator() {
       {!hasCompletedOnboarding ? (
         <>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="Subscription" component={SubscriptionScreen} />
+          <Stack.Screen 
+            name="Subscription" 
+            component={SubscriptionScreen}
+            // CRITICAL FIX: Pass callback to update onboarding state
+            initialParams={{ 
+              onComplete: () => setHasCompletedOnboarding(true) 
+            }}
+          />
         </>
       ) : (
         <>
           <Stack.Screen name="Main" component={MainTabNavigator} />
-          {/* FIXED: Subscription accessible after login with modal presentation */}
+          {/* Subscription accessible after login with modal presentation */}
           <Stack.Screen 
             name="Subscription" 
             component={SubscriptionScreen}

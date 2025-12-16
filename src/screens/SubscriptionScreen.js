@@ -50,12 +50,15 @@ const PLANS = [
   },
 ];
 
-export default function SubscriptionScreen({ navigation }) {
+export default function SubscriptionScreen({ navigation, route }) {
   const [selectedPlan, setSelectedPlan] = useState('pawguard_yearly_subscription');
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]);
   const { upgradeToPremium } = useUser();
+
+  // CRITICAL FIX: Get the callback from navigation params
+  const onComplete = route?.params?.onComplete;
 
   useEffect(() => {
     initializeIAP();
@@ -177,7 +180,7 @@ export default function SubscriptionScreen({ navigation }) {
             [
               {
                 text: 'Get Started',
-                onPress: () => navigation.replace('Main'),
+                onPress: navigateToMain,
               },
             ]
           );
@@ -204,13 +207,30 @@ export default function SubscriptionScreen({ navigation }) {
     };
   }, []);
 
-  const handleContinueFree = async () => {
+  // CRITICAL FIX: New function to handle navigation properly
+  const navigateToMain = async () => {
     await completeOnboarding();
-    navigation.replace('Main');
+    
+    // If we have the callback from AppNavigator, use it
+    if (onComplete) {
+      onComplete();
+    } else {
+      // If already on Main stack (post-onboarding), just go back
+      navigation.goBack?.();
+    }
+  };
+
+  const handleContinueFree = async () => {
+    await navigateToMain();
   };
 
   const completeOnboarding = async () => {
-    await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+    try {
+      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+      console.log('✅ Onboarding completed and saved');
+    } catch (error) {
+      console.error('❌ Error saving onboarding completion:', error);
+    }
   };
 
   const handleClose = () => {
@@ -240,7 +260,7 @@ export default function SubscriptionScreen({ navigation }) {
           [
             {
               text: 'Continue',
-              onPress: () => navigation.replace('Main'),
+              onPress: navigateToMain,
             },
           ]
         );
