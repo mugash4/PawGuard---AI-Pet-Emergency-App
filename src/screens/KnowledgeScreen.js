@@ -131,13 +131,14 @@ export default function KnowledgeScreen({ navigation }) {
           'You\'ve used all 5 free AI queries today. Upgrade to Premium for unlimited queries!',
           [
             { text: 'Maybe Later', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: () => {
-              try {
-                navigation.navigate('Subscription');
-              } catch (navError) {
-                console.error('Navigation error:', navError);
+            { 
+              text: 'Upgrade Now', 
+              onPress: async () => {
+                const { navigateToSubscription } = await import('../utils/navigationHelper');
+                await navigateToSubscription(navigation);
               }
-            }}
+            }
+
           ]
         );
         return;

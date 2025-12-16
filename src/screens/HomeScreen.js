@@ -26,10 +26,12 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('Emergency', { filter: scenarioType });
   };
 
-  // Handle upgrade button press
-  const handleUpgradePress = () => {
-    navigation.navigate('Subscription');
+  // ✅ FIXED: Handle upgrade button press with connectivity check
+  const handleUpgradePress = async () => {
+    const { navigateToSubscription } = await import('../utils/navigationHelper');
+    await navigateToSubscription(navigation);
   };
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

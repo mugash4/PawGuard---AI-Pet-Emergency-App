@@ -1,23 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../context/UserContext';
+import { navigateToSubscription } from '../utils/navigationHelper';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 
 export default function UpgradePrompt({ message, feature, navigation }) {
   const { user } = useUser();
+  const [loading, setLoading] = useState(false);
 
   // Don't show for premium users
   if (user?.isPremium) {
     return null;
   }
 
-  // Handle navigation safely
-  const handleUpgradePress = () => {
-    if (navigation && navigation.navigate) {
-      navigation.navigate('Subscription');
-    } else {
-      console.warn('Navigation not available in UpgradePrompt');
+  // ✅ FIXED: Handle upgrade with connectivity check
+  const handleUpgradePress = async () => {
+    setLoading(true);
+    try {
+      await navigateToSubscription(navigation, {
+        onSuccess: () => {
+          console.log('✅ Successfully navigated to subscription screen');
+        },
+        onError: (error) => {
+          console.error('❌ Navigation failed:', error.message);
+        },
+      });
+    } catch (error) {
+      console.error('❌ Error in upgrade handler:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,11 +60,18 @@ export default function UpgradePrompt({ message, feature, navigation }) {
           </View>
         </View>
         <TouchableOpacity
-          style={styles.upgradeButton}
+          style={[styles.upgradeButton, loading && styles.upgradeButtonDisabled]}
           onPress={handleUpgradePress}
+          disabled={loading}
         >
-          <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
-          <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            </>
+          )}
         </TouchableOpacity>
       </View>
       <View style={styles.pricing}>
@@ -125,6 +144,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xs,
     ...SHADOWS.small,
+  },
+  upgradeButtonDisabled: {
+    opacity: 0.6,
   },
   upgradeButtonText: {
     fontSize: FONTS.sizes.md,

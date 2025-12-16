@@ -99,12 +99,12 @@ export default function AIChatScreen({ navigation }) {
               { text: 'Maybe Later', style: 'cancel' },
               { 
                 text: 'Upgrade Now', 
-                onPress: () => {
-                  // Navigate to subscription screen
-                  // Find the root navigator and navigate
-                  navigation.getParent()?.navigate('Subscription');
+                onPress: async () => {
+                  const { navigateToSubscription } = await import('../utils/navigationHelper');
+                  await navigateToSubscription(navigation);
                 }
               }
+
             ]
           );
           return;

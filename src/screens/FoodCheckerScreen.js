@@ -114,21 +114,12 @@ export default function FoodCheckerScreen({ navigation }) {
     }
   };
 
-  const handleUpgradePress = () => {
-    try {
-      // ✅ FIXED: Better navigation handling
-      if (!navigation) {
-        Alert.alert('Error', 'Navigation not available');
-        return;
-      }
-    
-      // Navigate to root stack's Subscription screen
-      navigation.navigate('Subscription');
-    } catch (error) {
-      console.error('Navigation error:', error);
-      Alert.alert('Error', 'Unable to open subscription screen. Please restart the app.');
-    }
+  // ✅ FIXED: Handle upgrade with connectivity check and proper navigation
+  const handleUpgradePress = async () => {
+    const { navigateToSubscription } = await import('../utils/navigationHelper');
+    await navigateToSubscription(navigation);
   };
+
 
   const getSafetyColor = (level) => {
     switch (level?.toLowerCase()) {
