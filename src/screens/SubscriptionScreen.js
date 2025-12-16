@@ -58,10 +58,15 @@ export default function SubscriptionScreen({ navigation, route }) {
   const [subscriptions, setSubscriptions] = useState([]);
   const { upgradeToPremium } = useUser();
 
-  // CRITICAL FIX: Get the callback from navigation params
+  // CRITICAL FIX: Get both callback and fromOnboarding flag
   const onComplete = route?.params?.onComplete;
+  const fromOnboarding = route?.params?.fromOnboarding;
 
   useEffect(() => {
+    console.log('📱 SubscriptionScreen mounted');
+    console.log('   - Has onComplete callback:', !!onComplete);
+    console.log('   - From onboarding:', fromOnboarding);
+    
     initializeIAP();
     return () => {
       // Cleanup on unmount
@@ -171,8 +176,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           // Grant premium access
           const subscriptionType = purchase.productId.includes('yearly') ? 'yearly' : 'monthly';
           await upgradeToPremium(subscriptionType);
-          await completeOnboarding();
-
+          
           setPurchasing(false);
 
           Alert.alert(
@@ -181,7 +185,7 @@ export default function SubscriptionScreen({ navigation, route }) {
             [
               {
                 text: 'Get Started',
-                onPress: navigateToMain,
+                onPress: () => navigateToMain(true),
               },
             ]
           );
@@ -208,45 +212,49 @@ export default function SubscriptionScreen({ navigation, route }) {
     };
   }, []);
 
-  // CRITICAL FIX: Complete onboarding and navigate properly
-  const navigateToMain = async () => {
-    console.log('🚀 Navigating to Main - onComplete callback:', !!onComplete);
-    
-    await completeOnboarding();
-    
-    // CRITICAL FIX: If we have the callback (from onboarding flow), use it
-    if (onComplete) {
-      console.log('✅ Using onComplete callback');
-      onComplete();
-    } else {
-      // If already on Main stack (modal), just go back
-      console.log('✅ Going back (modal mode)');
-      if (navigation.canGoBack()) {
-        navigation.goBack();
+  // CRITICAL FIX: Simplified navigation that always works
+  const navigateToMain = async (completedPurchase = false) => {
+    console.log('🚀 navigateToMain called');
+    console.log('   - From onboarding:', fromOnboarding);
+    console.log('   - Has callback:', !!onComplete);
+    console.log('   - Completed purchase:', completedPurchase);
+
+    try {
+      // CRITICAL FIX: If from onboarding, ALWAYS use the callback
+      if (fromOnboarding && onComplete) {
+        console.log('✅ Using onComplete callback (onboarding flow)');
+        // The callback will handle AsyncStorage and navigation
+        await onComplete(navigation);
       } else {
-        // Fallback: reset to Main
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'Main' }],
-          })
-        );
+        // If opened as modal from Main, just go back
+        console.log('✅ Going back (modal mode)');
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          // Fallback: reset to Main (shouldn't happen but safe)
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'Main' }],
+            })
+          );
+        }
       }
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      // Last resort: force reset
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        })
+      );
     }
   };
 
   const handleContinueFree = async () => {
     console.log('🆓 Continue with free plan pressed');
-    await navigateToMain();
-  };
-
-  const completeOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
-      console.log('✅ Onboarding completed and saved to AsyncStorage');
-    } catch (error) {
-      console.error('❌ Error saving onboarding completion:', error);
-    }
+    await navigateToMain(false);
   };
 
   const handleClose = () => {
@@ -269,7 +277,6 @@ export default function SubscriptionScreen({ navigation, route }) {
         const subscriptionType = latestPurchase.productId.includes('yearly') ? 'yearly' : 'monthly';
         
         await upgradeToPremium(subscriptionType);
-        await completeOnboarding();
 
         Alert.alert(
           '✅ Purchases Restored',
@@ -277,7 +284,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           [
             {
               text: 'Continue',
-              onPress: navigateToMain,
+              onPress: () => navigateToMain(true),
             },
           ]
         );
@@ -307,14 +314,14 @@ export default function SubscriptionScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* CRITICAL FIX: Close Button - Better touch properties */}
+        {/* CRITICAL FIX: Close Button with better touch handling */}
         <TouchableOpacity 
           style={styles.closeButton} 
           onPress={handleClose}
-          activeOpacity={0.6}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
         >
-          <Ionicons name="close" size={30} color={COLORS.text} />
+          <Ionicons name="close" size={32} color={COLORS.text} />
         </TouchableOpacity>
 
         {/* Header */}
@@ -412,12 +419,12 @@ export default function SubscriptionScreen({ navigation, route }) {
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
 
-        {/* CRITICAL FIX: Continue Free Button - Better touch properties */}
+        {/* CRITICAL FIX: Continue Free Button with better touch handling */}
         <TouchableOpacity 
           style={styles.freeButton} 
           onPress={handleContinueFree}
-          activeOpacity={0.6}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
         >
           <Text style={styles.freeButtonText}>Continue with Free Plan</Text>
           <Text style={styles.freeButtonSubtext}>(5 AI searches/day, ads included)</Text>
@@ -454,9 +461,9 @@ const styles = StyleSheet.create({
     top: 16,
     right: 16,
     zIndex: 10,
-    padding: 8,
+    padding: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 22,
+    borderRadius: 24,
     ...SHADOWS.small,
   },
   header: {
@@ -617,23 +624,24 @@ const styles = StyleSheet.create({
   },
   freeButton: {
     marginHorizontal: SPACING.xl,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 2,
     borderColor: COLORS.border,
+    ...SHADOWS.small,
   },
   freeButtonText: {
-    fontSize: FONTS.sizes.md,
+    fontSize: FONTS.sizes.lg,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   freeButtonSubtext: {
-    fontSize: FONTS.sizes.xs,
+    fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 6,
   },
   termsText: {
     fontSize: FONTS.sizes.xs,

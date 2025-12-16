@@ -48,8 +48,8 @@ export default function OnboardingScreen({ navigation, route }) {
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // CRITICAL FIX: Get the callback from route params
-  const onNavigateToSubscription = route?.params?.onNavigateToSubscription;
+  // CRITICAL FIX: Get the onComplete callback directly
+  const onComplete = route?.params?.onComplete;
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
@@ -69,24 +69,22 @@ export default function OnboardingScreen({ navigation, route }) {
         animated: true,
       });
     } else {
-      // CRITICAL FIX: Use the callback to navigate with proper params
-      if (onNavigateToSubscription) {
-        onNavigateToSubscription(navigation);
-      } else {
-        // Fallback if callback not available
-        navigation.navigate('Subscription');
-      }
+      // CRITICAL FIX: Navigate to Subscription with the onComplete callback
+      console.log('🚀 Navigating to Subscription from Onboarding');
+      navigation.navigate('Subscription', { 
+        onComplete: onComplete,
+        fromOnboarding: true 
+      });
     }
   };
 
   const handleSkip = () => {
-    // CRITICAL FIX: Use the callback to navigate with proper params
-    if (onNavigateToSubscription) {
-      onNavigateToSubscription(navigation);
-    } else {
-      // Fallback if callback not available
-      navigation.navigate('Subscription');
-    }
+    // CRITICAL FIX: Navigate to Subscription with the onComplete callback
+    console.log('⏭️ Skipping to Subscription from Onboarding');
+    navigation.navigate('Subscription', { 
+      onComplete: onComplete,
+      fromOnboarding: true 
+    });
   };
 
   const renderSlide = (item, index) => {
@@ -159,7 +157,12 @@ export default function OnboardingScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Skip Button */}
-      <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+      <TouchableOpacity 
+        style={styles.skipButton} 
+        onPress={handleSkip}
+        activeOpacity={0.6}
+        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+      >
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
@@ -198,7 +201,11 @@ export default function OnboardingScreen({ navigation, route }) {
       </View>
 
       {/* Next Button */}
-      <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+      <TouchableOpacity 
+        style={styles.nextButton} 
+        onPress={handleNext}
+        activeOpacity={0.8}
+      >
         <Text style={styles.nextButtonText}>
           {currentIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
         </Text>

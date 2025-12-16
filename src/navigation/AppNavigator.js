@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
@@ -9,11 +10,11 @@ const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(null);
-  const [forceUpdate, setForceUpdate] = useState(0);
+  const [navigationRef, setNavigationRef] = useState(null);
 
   useEffect(() => {
     checkOnboarding();
-  }, [forceUpdate]);
+  }, []);
 
   const checkOnboarding = async () => {
     try {
@@ -26,18 +27,31 @@ export default function AppNavigator() {
     }
   };
 
-  // CRITICAL FIX: Function to complete onboarding and update navigation state
-  const handleOnboardingComplete = async () => {
-    console.log('✅ Onboarding completion triggered');
+  // CRITICAL FIX: Complete onboarding and immediately navigate to Main
+  const handleOnboardingComplete = async (navigation) => {
+    console.log('✅ handleOnboardingComplete called');
+    
     try {
+      // Save to AsyncStorage first
       await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
       console.log('✅ Onboarding saved to AsyncStorage');
-      // Force re-render by updating state
+      
+      // Update state
       setHasCompletedOnboarding(true);
-      // Trigger effect to double-check
-      setForceUpdate(prev => prev + 1);
+      
+      // CRITICAL FIX: Immediately reset navigation stack to Main
+      // This forces the navigation to change without waiting for re-render
+      if (navigation) {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          })
+        );
+        console.log('✅ Navigation reset to Main');
+      }
     } catch (error) {
-      console.error('❌ Error saving onboarding completion:', error);
+      console.error('❌ Error completing onboarding:', error);
     }
   };
 
@@ -53,24 +67,17 @@ export default function AppNavigator() {
             name="Onboarding" 
             component={OnboardingScreen}
             initialParams={{ 
-              onNavigateToSubscription: (navigation) => {
-                // Pass the completion handler when navigating to Subscription
-                navigation.navigate('Subscription', { 
-                  onComplete: handleOnboardingComplete 
-                });
-              }
+              onComplete: handleOnboardingComplete
             }}
           />
           <Stack.Screen 
             name="Subscription" 
             component={SubscriptionScreen}
-            // The onComplete callback will be passed via navigation params
           />
         </>
       ) : (
         <>
           <Stack.Screen name="Main" component={MainTabNavigator} />
-          {/* Subscription accessible after onboarding with modal presentation */}
           <Stack.Screen 
             name="Subscription" 
             component={SubscriptionScreen}
