@@ -9,14 +9,16 @@ const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   useEffect(() => {
     checkOnboarding();
-  }, []);
+  }, [forceUpdate]);
 
   const checkOnboarding = async () => {
     try {
       const completed = await AsyncStorage.getItem('hasCompletedOnboarding');
+      console.log('📋 Onboarding status:', completed);
       setHasCompletedOnboarding(completed === 'true');
     } catch (error) {
       console.error('Error checking onboarding:', error);
@@ -24,16 +26,20 @@ export default function AppNavigator() {
     }
   };
 
-  // CRITICAL FIX: Listen for onboarding completion changes
-  useEffect(() => {
-    const subscription = AsyncStorage.addListener?.('change', (data) => {
-      if (data?.hasCompletedOnboarding === 'true') {
-        setHasCompletedOnboarding(true);
-      }
-    });
-
-    return () => subscription?.remove?.();
-  }, []);
+  // CRITICAL FIX: Function to complete onboarding and update navigation state
+  const handleOnboardingComplete = async () => {
+    console.log('✅ Onboarding completion triggered');
+    try {
+      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+      console.log('✅ Onboarding saved to AsyncStorage');
+      // Force re-render by updating state
+      setHasCompletedOnboarding(true);
+      // Trigger effect to double-check
+      setForceUpdate(prev => prev + 1);
+    } catch (error) {
+      console.error('❌ Error saving onboarding completion:', error);
+    }
+  };
 
   if (hasCompletedOnboarding === null) {
     return null; // Loading
@@ -43,20 +49,28 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!hasCompletedOnboarding ? (
         <>
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen 
+            name="Onboarding" 
+            component={OnboardingScreen}
+            initialParams={{ 
+              onNavigateToSubscription: (navigation) => {
+                // Pass the completion handler when navigating to Subscription
+                navigation.navigate('Subscription', { 
+                  onComplete: handleOnboardingComplete 
+                });
+              }
+            }}
+          />
           <Stack.Screen 
             name="Subscription" 
             component={SubscriptionScreen}
-            // CRITICAL FIX: Pass callback to update onboarding state
-            initialParams={{ 
-              onComplete: () => setHasCompletedOnboarding(true) 
-            }}
+            // The onComplete callback will be passed via navigation params
           />
         </>
       ) : (
         <>
           <Stack.Screen name="Main" component={MainTabNavigator} />
-          {/* Subscription accessible after login with modal presentation */}
+          {/* Subscription accessible after onboarding with modal presentation */}
           <Stack.Screen 
             name="Subscription" 
             component={SubscriptionScreen}

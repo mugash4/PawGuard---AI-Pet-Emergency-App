@@ -43,10 +43,13 @@ const SLIDES = [
   },
 ];
 
-export default function OnboardingScreen({ navigation }) {
+export default function OnboardingScreen({ navigation, route }) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // CRITICAL FIX: Get the callback from route params
+  const onNavigateToSubscription = route?.params?.onNavigateToSubscription;
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
@@ -66,12 +69,24 @@ export default function OnboardingScreen({ navigation }) {
         animated: true,
       });
     } else {
-      navigation.navigate('Subscription');
+      // CRITICAL FIX: Use the callback to navigate with proper params
+      if (onNavigateToSubscription) {
+        onNavigateToSubscription(navigation);
+      } else {
+        // Fallback if callback not available
+        navigation.navigate('Subscription');
+      }
     }
   };
 
   const handleSkip = () => {
-    navigation.navigate('Subscription');
+    // CRITICAL FIX: Use the callback to navigate with proper params
+    if (onNavigateToSubscription) {
+      onNavigateToSubscription(navigation);
+    } else {
+      // Fallback if callback not available
+      navigation.navigate('Subscription');
+    }
   };
 
   const renderSlide = (item, index) => {

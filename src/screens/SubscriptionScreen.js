@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as RNIap from 'react-native-iap';
 import { useUser } from '../context/UserContext';
 import { COLORS, FONTS, SPACING, SHADOWS } from '../constants/theme';
+import { CommonActions } from '@react-navigation/native';
 
 // Product IDs from Google Play Console - REPLACE WITH YOUR ACTUAL PRODUCT IDs
 const SUBSCRIPTION_SKUS = Platform.select({
@@ -207,33 +208,49 @@ export default function SubscriptionScreen({ navigation, route }) {
     };
   }, []);
 
-  // CRITICAL FIX: New function to handle navigation properly
+  // CRITICAL FIX: Complete onboarding and navigate properly
   const navigateToMain = async () => {
+    console.log('🚀 Navigating to Main - onComplete callback:', !!onComplete);
+    
     await completeOnboarding();
     
-    // If we have the callback from AppNavigator, use it
+    // CRITICAL FIX: If we have the callback (from onboarding flow), use it
     if (onComplete) {
+      console.log('✅ Using onComplete callback');
       onComplete();
     } else {
-      // If already on Main stack (post-onboarding), just go back
-      navigation.goBack?.();
+      // If already on Main stack (modal), just go back
+      console.log('✅ Going back (modal mode)');
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        // Fallback: reset to Main
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          })
+        );
+      }
     }
   };
 
   const handleContinueFree = async () => {
+    console.log('🆓 Continue with free plan pressed');
     await navigateToMain();
   };
 
   const completeOnboarding = async () => {
     try {
       await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
-      console.log('✅ Onboarding completed and saved');
+      console.log('✅ Onboarding completed and saved to AsyncStorage');
     } catch (error) {
       console.error('❌ Error saving onboarding completion:', error);
     }
   };
 
   const handleClose = () => {
+    console.log('❌ Close button pressed');
     handleContinueFree();
   };
 
@@ -290,8 +307,13 @@ export default function SubscriptionScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+        {/* CRITICAL FIX: Close Button - Added activeOpacity and better touch target */}
+        <TouchableOpacity 
+          style={styles.closeButton} 
+          onPress={handleClose}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="close" size={28} color={COLORS.textSecondary} />
         </TouchableOpacity>
 
@@ -333,6 +355,7 @@ export default function SubscriptionScreen({ navigation, route }) {
               ]}
               onPress={() => setSelectedPlan(plan.id)}
               disabled={purchasing}
+              activeOpacity={0.8}
             >
               {plan.recommended && (
                 <View style={styles.recommendedBadge}>
@@ -368,6 +391,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           style={[styles.trialButton, purchasing && styles.trialButtonDisabled]} 
           onPress={handleSubscribe}
           disabled={purchasing}
+          activeOpacity={0.8}
         >
           {purchasing ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -383,12 +407,18 @@ export default function SubscriptionScreen({ navigation, route }) {
           style={styles.restoreButton} 
           onPress={handleRestorePurchases}
           disabled={purchasing || loading}
+          activeOpacity={0.7}
         >
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
 
-        {/* Continue Free */}
-        <TouchableOpacity style={styles.freeButton} onPress={handleContinueFree}>
+        {/* CRITICAL FIX: Continue Free Button - Added activeOpacity and better touch target */}
+        <TouchableOpacity 
+          style={styles.freeButton} 
+          onPress={handleContinueFree}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Text style={styles.freeButtonText}>Continue with Free Plan</Text>
           <Text style={styles.freeButtonSubtext}>(5 AI searches/day, ads included)</Text>
         </TouchableOpacity>
@@ -425,6 +455,8 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 10,
     padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
   },
   header: {
     paddingHorizontal: SPACING.xl,
@@ -587,6 +619,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: SPACING.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 12,
   },
   freeButtonText: {
     fontSize: FONTS.sizes.md,

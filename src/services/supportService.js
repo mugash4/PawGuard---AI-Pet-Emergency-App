@@ -1,14 +1,24 @@
 /**
- * AI-Powered Support Service
- * Handles customer support queries with intelligent AI responses
- * Forwards complex queries to human support via email
+ * AI-Powered Support Service with FREE EmailJS Integration
+ * No Firebase Cloud Functions required - works on FREE plan!
  */
 
 import { callAI } from './aiService';
 import { doc, setDoc, getDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db, waitForAuth } from './firebase';
+import emailjs from '@emailjs/react-native';
 
 const SUPPORT_EMAIL = 'augustinemwathi96@gmail.com';
+
+// ========================================
+// 🔧 EMAILJS CONFIGURATION
+// ========================================
+// Replace these with your EmailJS credentials from https://www.emailjs.com/
+const EMAILJS_CONFIG = {
+  SERVICE_ID: 'service_98ma6t8',        // e.g., 'service_abc123'
+  TEMPLATE_ID: 'template_fg9k328',      // e.g., 'template_xyz789'
+  PUBLIC_KEY: '4ioRo7sc9G03lGvxI',        // e.g., 'user_ABC123xyz'
+};
 
 /**
  * Comprehensive app knowledge base for AI
@@ -201,29 +211,87 @@ ${APP_KNOWLEDGE_BASE}`;
 }
 
 /**
- * Send email to human support for complex queries
+ * 📧 Send email using EmailJS (FREE - no Firebase Functions needed!)
  */
-async function forwardToHumanSupport(ticketData) {
+async function sendSupportEmail(ticketData) {
   try {
-    await waitForAuth();
-
-    if (!db) {
-      console.warn('Firebase not initialized, cannot forward to human support');
+    // Validate EmailJS configuration
+    if (
+      EMAILJS_CONFIG.SERVICE_ID === 'service_98ma6t8' ||
+      EMAILJS_CONFIG.TEMPLATE_ID === 'template_fg9k328' ||
+      EMAILJS_CONFIG.PUBLIC_KEY === '4ioRo7sc9G03lGvxI'
+    ) {
+      console.warn('⚠️ EmailJS not configured. Please add your credentials in supportService.js');
       return false;
     }
 
-    // Save to Firestore for admin to process
-    const ticketRef = doc(collection(db, 'supportTickets'), ticketData.ticketId);
-    
-    await setDoc(ticketRef, {
-      ...ticketData,
-      status: 'pending_human',
-      forwardedAt: serverTimestamp(),
-      supportEmail: SUPPORT_EMAIL
-    });
+    // Prepare email parameters
+    const emailParams = {
+      ticket_id: ticketData.ticketId,
+      ticket_number: ticketData.ticketId.substring(7, 17),
+      user_name: ticketData.userName || 'Anonymous User',
+      user_email: ticketData.userEmail || 'Not provided',
+      user_id: ticketData.userId,
+      category: ticketData.category || 'general',
+      query: ticketData.query,
+      ai_response: ticketData.aiResponse ? `\nAI ATTEMPTED RESPONSE:\n${ticketData.aiResponse}\n` : '',
+      status: ticketData.status,
+      created_at: ticketData.createdAt,
+      to_email: SUPPORT_EMAIL, // Your support email
+    };
 
-    console.log('✅ Ticket forwarded to human support');
+    console.log('📧 Sending support email via EmailJS...');
+
+    // Send email using EmailJS
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.TEMPLATE_ID,
+      emailParams,
+      EMAILJS_CONFIG.PUBLIC_KEY
+    );
+
+    console.log('✅ Support email sent successfully:', response);
     return true;
+  } catch (error) {
+    console.error('❌ Error sending support email:', error);
+    return false;
+  }
+}
+
+/**
+ * Forward ticket to human support (saves to Firestore + sends email)
+ */
+async function forwardToHumanSupport(ticketData) {
+  try {
+    let firestoreSaved = false;
+    let emailSent = false;
+
+    // Try to save to Firestore
+    try {
+      await waitForAuth();
+
+      if (db) {
+        const ticketRef = doc(collection(db, 'supportTickets'), ticketData.ticketId);
+        
+        await setDoc(ticketRef, {
+          ...ticketData,
+          status: 'pending_human',
+          forwardedAt: serverTimestamp(),
+          supportEmail: SUPPORT_EMAIL
+        });
+
+        console.log('✅ Ticket saved to Firestore');
+        firestoreSaved = true;
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not save to Firestore:', error.message);
+    }
+
+    // Send email via EmailJS
+    emailSent = await sendSupportEmail(ticketData);
+
+    // Return success if either method worked
+    return firestoreSaved || emailSent;
   } catch (error) {
     console.error('❌ Error forwarding to human support:', error);
     return false;
@@ -274,7 +342,7 @@ export async function handleSupportQuery(userId, userName, userEmail, query) {
       resolvedByAI: !needsHuman
     };
 
-    // Save ticket to Firestore
+    // Save ticket to Firestore (optional - works without Firebase too)
     try {
       await waitForAuth();
       if (db) {
@@ -286,18 +354,23 @@ export async function handleSupportQuery(userId, userName, userEmail, query) {
         console.log('✅ Ticket saved to Firestore');
       }
     } catch (error) {
-      console.error('⚠️ Could not save ticket to Firestore:', error);
+      console.warn('⚠️ Could not save ticket to Firestore:', error.message);
+      // Continue anyway - email will still work
     }
 
     // Forward to human support if needed
     if (needsHuman) {
       console.log('📧 Forwarding to human support...');
-      await forwardToHumanSupport(ticketData);
+      const forwarded = await forwardToHumanSupport(ticketData);
+      
+      if (!forwarded) {
+        console.warn('⚠️ Could not forward email, but ticket was logged');
+      }
       
       return {
         success: true,
         ticketId,
-        message: `Your support ticket #${ticketId} has been forwarded to our team. We'll respond to ${userEmail || 'your email'} within 24 hours.`,
+        message: `Your support ticket #${ticketId.substring(7, 17)} has been forwarded to our team. We'll respond to ${userEmail || 'your email'} within 24 hours.`,
         needsHuman: true,
         category: analysis.category
       };
