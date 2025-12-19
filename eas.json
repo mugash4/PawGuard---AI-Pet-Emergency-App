@@ -24,14 +24,12 @@
       }
     },
     "production": {
-      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
         "KOTLIN_VERSION": "2.0.21"
       }
-
     }
   },
   "submit": {

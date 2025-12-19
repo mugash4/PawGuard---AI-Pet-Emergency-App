@@ -17,7 +17,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.pawguard.app",
-      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || "./GoogleService-Info.plist",
+      buildNumber: "1.1.0",
       config: {
         googleMobileAdsAppId: "ca-app-pub-3940256099942544~1458002511"
       },
@@ -35,8 +35,7 @@ module.exports = {
         backgroundColor: "#FF8C61"
       },
       package: "com.pawguard.app",
-      versionCode: 3,
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./google-services.json",
+      versionCode: 4,
       config: {
         googleMobileAdsAppId: "ca-app-pub-2371616866592450~9934191141"
       },
