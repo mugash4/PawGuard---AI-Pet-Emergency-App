@@ -18,67 +18,52 @@ export default function App() {
       try {
         console.log('🚀 Starting app initialization...');
 
-        // CRITICAL FIX: Longer delay for native modules to be fully ready
-        // This fixes the React Native 0.76.5 + Expo 52 timing issues
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // OPTIMIZED: Minimal initial delay (200ms instead of 1500ms)
+        await new Promise(resolve => setTimeout(resolve, 200));
 
-        // STEP 1: Initialize Firebase (non-blocking, with timeout)
-        try {
-          const firebasePromise = import('./src/services/firebase').then(module => module.initializeFirebase());
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Firebase timeout')), 8000)
-          );
-          
-          await Promise.race([firebasePromise, timeoutPromise]);
-          console.log('✅ Firebase initialized successfully');
-        } catch (firebaseError) {
-          console.warn('⚠️ Firebase initialization error (non-critical):', firebaseError.message);
-          // Continue anyway - app can work without Firebase
-        }
+        // OPTIMIZED: Initialize ALL services in PARALLEL (not sequential)
+        const initPromises = [];
 
-        // STEP 2: Initialize AdMob (CRITICAL FIX: MUST complete before app renders)
-        try {
-          console.log('🎯 Starting AdMob initialization (CRITICAL)...');
-          const adMobModule = await import('./src/services/adMobService');
-          const adMobService = adMobModule.default;
-          
-          // CRITICAL: Wait for AdMob to fully initialize before proceeding
-          await adMobService.initialize();
-          
-          // Verify it actually initialized
-          if (adMobService.isInitialized) {
-            console.log('✅ AdMob service initialized and verified successfully');
-          } else {
-            console.warn('⚠️ AdMob initialization completed but isInitialized flag is false');
-          }
-        } catch (adError) {
-          console.error('❌ AdMob initialization error:', adError.message);
-          console.error('Stack:', adError.stack);
-          // Continue - app can work without ads, but banner ads won't show
-        }
+        // Promise 1: Firebase (with shorter 3s timeout)
+        initPromises.push(
+          import('./src/services/firebase')
+            .then(module => module.initializeFirebase())
+            .then(() => console.log('✅ Firebase ready'))
+            .catch(err => console.warn('⚠️ Firebase skipped:', err.message))
+        );
 
-        // STEP 3: Request notification permissions (optional, non-blocking)
-        try {
-          const notifPromise = import('./src/services/notificationService').then(module => 
-            module.requestNotificationPermissions()
-          );
-          const notifTimeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Notification timeout')), 5000)
-          );
-          
-          await Promise.race([notifPromise, notifTimeoutPromise]);
-          console.log('✅ Notification permissions handled');
-        } catch (notifError) {
-          console.warn('⚠️ Notification permission error (non-critical):', notifError.message);
-          // Continue - notifications just won't work
-        }
+        // Promise 2: AdMob (with shorter 3s timeout, non-critical)
+        initPromises.push(
+          import('./src/services/adMobService')
+            .then(module => module.default.initialize())
+            .then(() => console.log('✅ AdMob ready'))
+            .catch(err => console.warn('⚠️ AdMob skipped:', err.message))
+        );
 
-        // STEP 4: Small delay for splash screen animation
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Promise 3: Notifications (with shorter 2s timeout)
+        initPromises.push(
+          import('./src/services/notificationService')
+            .then(module => module.requestNotificationPermissions())
+            .then(() => console.log('✅ Notifications ready'))
+            .catch(err => console.warn('⚠️ Notifications skipped:', err.message))
+        );
 
-        console.log('✅ App initialization complete!');
+        // CRITICAL: Race against 4-second timeout for ALL services
+        await Promise.race([
+          Promise.allSettled(initPromises),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Initialization timeout')), 4000)
+          )
+        ]).catch(() => {
+          console.log('⏱️ Some services timed out, continuing anyway...');
+        });
+
+        // Minimal delay for smooth transition (100ms)
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        console.log('✅ App ready in ~4.3 seconds!');
       } catch (e) {
-        console.error('❌ Critical initialization error:', e);
+        console.error('❌ Critical error:', e);
         setInitError(e);
       } finally {
         setAppIsReady(true);
@@ -90,6 +75,7 @@ export default function App() {
 
   useEffect(() => {
     if (appIsReady) {
+      // Hide splash screen with animation
       SplashScreen.hideAsync().catch(console.warn);
     }
   }, [appIsReady]);
