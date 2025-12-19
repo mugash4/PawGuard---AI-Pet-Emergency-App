@@ -66,9 +66,6 @@ module.exports = {
         {
           icon: "./assets/images/notification-icon.png",
           color: "#FF8C61",
-          sounds: [
-            "./assets/sounds/notification.wav"
-          ]
         }
       ],
       [
