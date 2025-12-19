@@ -57,19 +57,3 @@ coverage/
 .firebase/
 firebase-debug.log
 firestore-debug.log
-
-
-# Firebase Config Files (keep these private)
-google-services.json
-GoogleService-Info.plist
-
-# Service Account Keys (NEVER upload these)
-*-firebase-adminsdk-*.json
-service-account-key.json
-
-# Environment Variables
-.env
-.env.local
-
-# API Keys
-*-api-key.json
