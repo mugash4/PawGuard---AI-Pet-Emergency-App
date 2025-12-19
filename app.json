@@ -17,7 +17,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pawguard.app",
-      "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
       },
@@ -36,7 +35,6 @@
       },
       "package": "com.pawguard.app",
       "versionCode": 4,
-      "googleServicesFile": "./google-services.json",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-2371616866592450~9934191141"
       },
