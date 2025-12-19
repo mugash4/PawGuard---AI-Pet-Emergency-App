@@ -40,11 +40,11 @@ export default function App() {
             .catch(err => console.warn('⚠️ AdMob skipped:', err.message))
         );
 
-        // Promise 3: Notifications (with shorter 2s timeout)
+        // Promise 3: Notifications (with shorter 2s timeout) - EXPO ONLY
         initPromises.push(
           import('./src/services/notificationService')
             .then(module => module.requestNotificationPermissions())
-            .then(() => console.log('✅ Notifications ready'))
+            .then(() => console.log('✅ Expo Notifications ready'))
             .catch(err => console.warn('⚠️ Notifications skipped:', err.message))
         );
 
