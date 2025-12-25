@@ -30,7 +30,8 @@ const SUBSCRIPTION_SKUS = Platform.select({
   default: [],
 });
 
-const PLANS = [
+// ✅ FIX: Default plan structure (will be updated with real prices from store)
+const DEFAULT_PLANS = [
   {
     id: 'pawguard_monthly_subscription',
     name: 'Monthly',
@@ -56,6 +57,8 @@ export default function SubscriptionScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]);
+  // ✅ FIX: Add state for plans so component re-renders when prices update
+  const [plans, setPlans] = useState(DEFAULT_PLANS);
   const { upgradeToPremium } = useUser();
 
   // CRITICAL FIX: Get both callback and fromOnboarding flag
@@ -87,14 +90,24 @@ export default function SubscriptionScreen({ navigation, route }) {
       if (availableSubscriptions && availableSubscriptions.length > 0) {
         setSubscriptions(availableSubscriptions);
         
-        // Update PLANS with actual prices from store
+        // ✅ FIX: Update plans state with actual prices from store
+        const updatedPlans = [...DEFAULT_PLANS];
         availableSubscriptions.forEach(sub => {
-          const planIndex = PLANS.findIndex(p => p.id === sub.productId);
+          const planIndex = updatedPlans.findIndex(p => p.id === sub.productId);
           if (planIndex !== -1) {
-            PLANS[planIndex].price = sub.localizedPrice;
-            PLANS[planIndex].priceValue = sub.price;
+            // Update with actual store price
+            updatedPlans[planIndex].price = sub.localizedPrice || sub.price;
+            updatedPlans[planIndex].priceValue = parseFloat(sub.price) || updatedPlans[planIndex].priceValue;
+            
+            console.log(`✅ Updated ${sub.productId}: ${updatedPlans[planIndex].price}`);
           }
         });
+        
+        // ✅ FIX: Set updated plans to trigger re-render
+        setPlans(updatedPlans);
+      } else {
+        console.log('⚠️ No subscriptions found from store, using default prices');
+        // Keep default prices if store doesn't return anything
       }
 
       setLoading(false);
@@ -102,10 +115,13 @@ export default function SubscriptionScreen({ navigation, route }) {
       console.error('Error initializing IAP:', error);
       setLoading(false);
       
+      // ✅ FIX: Even if store connection fails, show default prices
+      console.log('⚠️ Using default prices due to store connection error');
+      
       // If initialization fails, show alert but allow continuing
       Alert.alert(
         'Connection Issue',
-        'Could not connect to store. You can still explore the app features.',
+        'Could not connect to store. Showing default prices. You can still explore the app features.',
         [{ text: 'OK' }]
       );
     }
@@ -351,9 +367,9 @@ export default function SubscriptionScreen({ navigation, route }) {
           ))}
         </View>
 
-        {/* Plans */}
+        {/* ✅ FIX: Plans - now using state variable that updates */}
         <View style={styles.plansContainer}>
-          {PLANS.map((plan) => (
+          {plans.map((plan) => (
             <TouchableOpacity
               key={plan.id}
               style={[
@@ -381,6 +397,7 @@ export default function SubscriptionScreen({ navigation, route }) {
                   )}
                 </View>
                 <View style={styles.planPrice}>
+                  {/* ✅ FIX: Display price with proper formatting */}
                   <Text style={styles.priceAmount}>{plan.price}</Text>
                   <Text style={styles.pricePeriod}>{plan.period}</Text>
                 </View>
