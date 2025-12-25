@@ -52,6 +52,51 @@ const DEFAULT_PLANS = [
   },
 ];
 
+// ✅ FIX: Helper function to extract price from subscription object
+const getSubscriptionPrice = (subscription) => {
+  console.log('📊 Extracting price for:', subscription.productId);
+  
+  if (Platform.OS === 'ios') {
+    // iOS: Use localizedPrice directly
+    const price = subscription.localizedPrice || subscription.price;
+    console.log('   iOS price:', price);
+    return price;
+  } else {
+    // Android: Extract from subscriptionOfferDetails
+    try {
+      if (subscription.subscriptionOfferDetails && 
+          subscription.subscriptionOfferDetails.length > 0) {
+        const offerDetails = subscription.subscriptionOfferDetails[0];
+        
+        if (offerDetails.pricingPhases && 
+            offerDetails.pricingPhases.pricingPhaseList && 
+            offerDetails.pricingPhases.pricingPhaseList.length > 0) {
+          const formattedPrice = offerDetails.pricingPhases.pricingPhaseList[0].formattedPrice;
+          console.log('   Android price:', formattedPrice);
+          return formattedPrice;
+        }
+      }
+      
+      // Fallback to other possible price fields
+      if (subscription.localizedPrice) {
+        console.log('   Android fallback price (localizedPrice):', subscription.localizedPrice);
+        return subscription.localizedPrice;
+      }
+      
+      if (subscription.price) {
+        console.log('   Android fallback price (price):', subscription.price);
+        return subscription.price;
+      }
+      
+      console.warn('   ⚠️ No price found for Android subscription');
+      return null;
+    } catch (error) {
+      console.error('   ❌ Error extracting Android price:', error);
+      return null;
+    }
+  }
+};
+
 export default function SubscriptionScreen({ navigation, route }) {
   const [selectedPlan, setSelectedPlan] = useState('pawguard_yearly_subscription');
   const [loading, setLoading] = useState(true);
@@ -81,27 +126,42 @@ export default function SubscriptionScreen({ navigation, route }) {
     try {
       // Initialize connection to app stores
       await RNIap.initConnection();
-      console.log('IAP Connection initialized');
+      console.log('✅ IAP Connection initialized');
 
       // Get available subscriptions from Google Play / App Store
       const availableSubscriptions = await RNIap.getSubscriptions({ skus: SUBSCRIPTION_SKUS });
-      console.log('Available Subscriptions:', availableSubscriptions);
+      console.log('📦 Available Subscriptions:', JSON.stringify(availableSubscriptions, null, 2));
       
       if (availableSubscriptions && availableSubscriptions.length > 0) {
         setSubscriptions(availableSubscriptions);
         
         // ✅ FIX: Update plans state with actual prices from store
-        const updatedPlans = [...DEFAULT_PLANS];
-        availableSubscriptions.forEach(sub => {
-          const planIndex = updatedPlans.findIndex(p => p.id === sub.productId);
-          if (planIndex !== -1) {
-            // Update with actual store price
-            updatedPlans[planIndex].price = sub.localizedPrice || sub.price;
-            updatedPlans[planIndex].priceValue = parseFloat(sub.price) || updatedPlans[planIndex].priceValue;
+        const updatedPlans = DEFAULT_PLANS.map(plan => {
+          const subscription = availableSubscriptions.find(sub => sub.productId === plan.id);
+          
+          if (subscription) {
+            // ✅ FIX: Use the helper function to extract price correctly
+            const storePrice = getSubscriptionPrice(subscription);
             
-            console.log(`✅ Updated ${sub.productId}: ${updatedPlans[planIndex].price}`);
+            if (storePrice) {
+              console.log(`✅ Updated ${plan.id}: ${storePrice}`);
+              return {
+                ...plan,
+                price: storePrice,
+                // Try to extract numeric value for calculations
+                priceValue: parseFloat(storePrice.replace(/[^0-9.]/g, '')) || plan.priceValue,
+              };
+            } else {
+              console.log(`⚠️ No price found for ${plan.id}, keeping default: ${plan.price}`);
+            }
+          } else {
+            console.log(`⚠️ Subscription not found in store for ${plan.id}`);
           }
+          
+          return plan;
         });
+        
+        console.log('📋 Final plans:', JSON.stringify(updatedPlans, null, 2));
         
         // ✅ FIX: Set updated plans to trigger re-render
         setPlans(updatedPlans);
@@ -112,7 +172,7 @@ export default function SubscriptionScreen({ navigation, route }) {
 
       setLoading(false);
     } catch (error) {
-      console.error('Error initializing IAP:', error);
+      console.error('❌ Error initializing IAP:', error);
       setLoading(false);
       
       // ✅ FIX: Even if store connection fails, show default prices
