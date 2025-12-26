@@ -390,6 +390,18 @@ export default function SubscriptionScreen({ navigation, route }) {
     }
   };
 
+  // ✅ NEW: Handle "Continue with Free Plan" button
+  const handleContinueWithFreePlan = () => {
+    console.log('🆓 User chose to continue with free plan');
+    navigateToMain(false);
+  };
+
+  // ✅ NEW: Handle close button
+  const handleClose = () => {
+    console.log('❌ User closed subscription screen');
+    navigateToMain(false);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -403,6 +415,16 @@ export default function SubscriptionScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* ✅ NEW: Close Button (X) in top right corner */}
+      <TouchableOpacity 
+        style={styles.closeButton}
+        onPress={handleClose}
+        activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Ionicons name="close" size={28} color={COLORS.text} />
+      </TouchableOpacity>
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -503,6 +525,16 @@ export default function SubscriptionScreen({ navigation, route }) {
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
 
+        {/* ✅ NEW: Continue with Free Plan Button */}
+        <TouchableOpacity 
+          style={styles.freePlanButton} 
+          onPress={handleContinueWithFreePlan}
+          disabled={purchasing || loading}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.freePlanButtonText}>Continue with Free Plan</Text>
+        </TouchableOpacity>
+
         {/* Terms */}
         <Text style={styles.termsText}>
           By subscribing, you agree to our Terms of Service and Privacy Policy. 
@@ -517,6 +549,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  // ✅ NEW: Close button style
+  closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 10,
+    right: 20,
+    zIndex: 999,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -679,11 +724,23 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.xl,
     paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.sm,
   },
   restoreButtonText: {
     fontSize: FONTS.sizes.md,
     color: COLORS.secondary,
+    fontWeight: '600',
+  },
+  // ✅ NEW: Free Plan button style
+  freePlanButton: {
+    marginHorizontal: SPACING.xl,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  freePlanButtonText: {
+    fontSize: FONTS.sizes.md,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   termsText: {
