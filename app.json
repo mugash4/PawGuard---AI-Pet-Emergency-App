@@ -34,7 +34,7 @@
         "backgroundColor": "#FF8C61"
       },
       "package": "com.pawguard.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-2371616866592450~9934191141"
       },
@@ -59,7 +59,15 @@
     },
     "plugins": [
       "expo-font",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FF8C61",
+          "image": "./assets/images/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
       [
         "expo-notifications",
         {
