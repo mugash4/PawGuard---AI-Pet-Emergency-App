@@ -2,7 +2,7 @@
   "expo": {
     "name": "PawGuard",
     "slug": "pawguard",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -98,7 +98,7 @@
         "expo-build-properties",
         {
           "android": {
-            "androidGradlePluginVersion": "8.3.2",
+            "androidGradlePluginVersion": "8.7.0",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
