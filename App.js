@@ -18,52 +18,73 @@ export default function App() {
       try {
         console.log('🚀 Starting app initialization...');
 
-        // OPTIMIZED: Minimal initial delay (200ms instead of 1500ms)
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Minimal initial delay for smooth startup
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        // OPTIMIZED: Initialize ALL services in PARALLEL (not sequential)
+        // Initialize services in parallel with proper error handling
         const initPromises = [];
 
-        // Promise 1: Firebase (with shorter 3s timeout)
+        // Promise 1: Firebase (with timeout and graceful degradation)
         initPromises.push(
-          import('./src/services/firebase')
-            .then(module => module.initializeFirebase())
-            .then(() => console.log('✅ Firebase ready'))
-            .catch(err => console.warn('⚠️ Firebase skipped:', err.message))
+          Promise.resolve().then(async () => {
+            try {
+              const module = await import('./src/services/firebase');
+              if (module && module.initializeFirebase) {
+                await module.initializeFirebase();
+                console.log('✅ Firebase ready');
+              }
+            } catch (err) {
+              console.warn('⚠️ Firebase skipped (non-critical):', err.message);
+            }
+          })
         );
 
-        // Promise 2: AdMob (with shorter 3s timeout, non-critical)
+        // Promise 2: AdMob (with timeout and graceful degradation)
         initPromises.push(
-          import('./src/services/adMobService')
-            .then(module => module.default.initialize())
-            .then(() => console.log('✅ AdMob ready'))
-            .catch(err => console.warn('⚠️ AdMob skipped:', err.message))
+          Promise.resolve().then(async () => {
+            try {
+              const module = await import('./src/services/adMobService');
+              if (module && module.default && module.default.initialize) {
+                await module.default.initialize();
+                console.log('✅ AdMob ready');
+              }
+            } catch (err) {
+              console.warn('⚠️ AdMob skipped (non-critical):', err.message);
+            }
+          })
         );
 
-        // Promise 3: Notifications (with shorter 2s timeout) - EXPO ONLY
+        // Promise 3: Notifications (with timeout and graceful degradation)
         initPromises.push(
-          import('./src/services/notificationService')
-            .then(module => module.requestNotificationPermissions())
-            .then(() => console.log('✅ Expo Notifications ready'))
-            .catch(err => console.warn('⚠️ Notifications skipped:', err.message))
+          Promise.resolve().then(async () => {
+            try {
+              const module = await import('./src/services/notificationService');
+              if (module && module.requestNotificationPermissions) {
+                await module.requestNotificationPermissions();
+                console.log('✅ Notifications ready');
+              }
+            } catch (err) {
+              console.warn('⚠️ Notifications skipped (non-critical):', err.message);
+            }
+          })
         );
 
-        // CRITICAL: Race against 4-second timeout for ALL services
+        // Wait for all services with timeout
         await Promise.race([
           Promise.allSettled(initPromises),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Initialization timeout')), 4000)
+            setTimeout(() => reject(new Error('Initialization timeout')), 5000)
           )
         ]).catch(() => {
           console.log('⏱️ Some services timed out, continuing anyway...');
         });
 
-        // Minimal delay for smooth transition (100ms)
+        // Small delay for smooth transition
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        console.log('✅ App ready in ~4.3 seconds!');
+        console.log('✅ App ready!');
       } catch (e) {
-        console.error('❌ Critical error:', e);
+        console.error('❌ Critical error during initialization:', e);
         setInitError(e);
       } finally {
         setAppIsReady(true);
@@ -76,12 +97,14 @@ export default function App() {
   useEffect(() => {
     if (appIsReady) {
       // Hide splash screen with animation
-      SplashScreen.hideAsync().catch(console.warn);
+      SplashScreen.hideAsync().catch(err => {
+        console.warn('⚠️ Error hiding splash screen:', err);
+      });
     }
   }, [appIsReady]);
 
-  // Show error screen if critical failure
-  if (initError) {
+  // Show error screen if critical failure (but continue normally for non-critical errors)
+  if (initError && initError.message.includes('Critical')) {
     return (
       <SafeAreaProvider>
         <View style={styles.errorContainer}>
