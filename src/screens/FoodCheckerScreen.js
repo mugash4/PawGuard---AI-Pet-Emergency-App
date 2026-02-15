@@ -15,7 +15,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons'; // ✅ ADDED THIS IMPORT
+import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '../context/UserContext';
 import { checkFoodSafety, checkQueryLimit, trackQueryUsage } from '../services/aiService';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -50,7 +50,6 @@ export default function FoodCheckerScreen({ navigation }) {
 
   const loadRemainingQueries = async () => {
     try {
-      // ✅ FIXED: Use user.id consistently
       if (!user?.id) {
         console.warn('No user ID available');
         return;
@@ -59,7 +58,7 @@ export default function FoodCheckerScreen({ navigation }) {
       setRemaining(limit.remaining);
     } catch (error) {
       console.error('Error loading remaining queries:', error);
-      setRemaining(5); // Default to 5 on error
+      setRemaining(5);
     }
   };
 
@@ -69,14 +68,12 @@ export default function FoodCheckerScreen({ navigation }) {
       return;
     }
 
-    // ✅ FIXED: Use user.id consistently
     if (!user?.id) {
       Alert.alert('Error', 'User session not available. Please restart the app.');
       return;
     }
 
     try {
-      // Check query limit
       const limit = await checkQueryLimit(user.id, user.isPremium);
       
       if (!limit.allowed) {
@@ -94,14 +91,11 @@ export default function FoodCheckerScreen({ navigation }) {
       setLoading(true);
       setResult(null);
 
-      // Call AI to check food safety
       const response = await checkFoodSafety(foodName);
-      
-      // Track usage
       await trackQueryUsage(user.id);
       
       setResult(response);
-      loadRemainingQueries(); // Refresh remaining count
+      loadRemainingQueries();
     } catch (error) {
       console.error('Error checking food:', error);
       Alert.alert(
@@ -114,12 +108,20 @@ export default function FoodCheckerScreen({ navigation }) {
     }
   };
 
-  // ✅ FIXED: Handle upgrade with connectivity check and proper navigation
   const handleUpgradePress = async () => {
     const { navigateToSubscription } = await import('../utils/navigationHelper');
     await navigateToSubscription(navigation);
   };
 
+  // ✅ FIXED: Proper navigation to AIChat screen in HomeStack
+  const handleOpenAIChat = () => {
+    try {
+      // Navigate to Home tab, then to AIChat screen within that stack
+      navigation.navigate('Home', { screen: 'AIChat' });
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+    }
+  };
 
   const getSafetyColor = (level) => {
     switch (level?.toLowerCase()) {
@@ -139,7 +141,6 @@ export default function FoodCheckerScreen({ navigation }) {
     }
   };
 
-  // Show loading state while user is being initialized
   if (!user) {
     return (
       <SafeAreaView style={styles.container}>
@@ -169,7 +170,6 @@ export default function FoodCheckerScreen({ navigation }) {
           )}
         </View>
 
-        {/* AdMob Banner - First Ad */}
         {!user.isPremium && <AdBanner />}
 
         {/* Search Input */}
@@ -211,7 +211,6 @@ export default function FoodCheckerScreen({ navigation }) {
               styles.resultCard,
               { borderLeftColor: getSafetyColor(result.safetyLevel), borderLeftWidth: 6 }
             ]}>
-              {/* Safety Level Header */}
               <View style={styles.resultHeader}>
                 <Text style={styles.resultEmoji}>
                   {result.emoji || getSafetyIcon(result.safetyLevel)}
@@ -229,7 +228,6 @@ export default function FoodCheckerScreen({ navigation }) {
                 </View>
               </View>
 
-              {/* Explanation */}
               {result.shortExplanation && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>💡 Explanation</Text>
@@ -239,7 +237,6 @@ export default function FoodCheckerScreen({ navigation }) {
                 </View>
               )}
 
-              {/* Symptoms */}
               {result.symptoms && result.symptoms.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>🩺 Potential Symptoms</Text>
@@ -252,7 +249,6 @@ export default function FoodCheckerScreen({ navigation }) {
                 </View>
               )}
 
-              {/* Advice */}
               {result.advice && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>📋 What To Do</Text>
@@ -260,7 +256,6 @@ export default function FoodCheckerScreen({ navigation }) {
                 </View>
               )}
 
-              {/* Disclaimer */}
               <View style={styles.disclaimer}>
                 <Text style={styles.disclaimerText}>
                   ⚠️ AI-generated information. Always consult your veterinarian for serious concerns.
@@ -268,7 +263,6 @@ export default function FoodCheckerScreen({ navigation }) {
               </View>
             </View>
 
-            {/* AdMob Banner after result */}
             {!user.isPremium && <AdBanner />}
           </View>
         )}
@@ -289,9 +283,7 @@ export default function FoodCheckerScreen({ navigation }) {
                 <TouchableOpacity
                   key={index}
                   style={styles.quickRefItem}
-                  onPress={() => {
-                    setFoodName(item.name);
-                  }}
+                  onPress={() => setFoodName(item.name)}
                   disabled={loading}
                 >
                   <Text style={styles.quickRefEmoji}>{item.emoji}</Text>
@@ -308,10 +300,8 @@ export default function FoodCheckerScreen({ navigation }) {
           </View>
         )}
 
-        {/* AdMob Banner before upgrade CTA */}
         {!user.isPremium && <AdBanner />}
 
-        {/* Upgrade CTA for free users */}
         {!user.isPremium && (
           <View style={styles.upgradeCTA}>
             <Text style={styles.upgradeTitle}>Want Unlimited Checks?</Text>
@@ -328,16 +318,11 @@ export default function FoodCheckerScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* Floating AI Chat Button - ✅ NOW WORKS WITH IONICONS */}
+      {/* ✅ FIXED: Floating AI Chat Button with proper navigation */}
       <TouchableOpacity
         style={styles.floatingChatButton}
-        onPress={() => {
-          try {
-            navigation.navigate('AIChat');
-          } catch (error) {
-            console.error('Navigation error:', error);
-          }
-        }}
+        onPress={handleOpenAIChat}
+        activeOpacity={0.8}
       >
         <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
       </TouchableOpacity>
@@ -614,7 +599,7 @@ const styles = StyleSheet.create({
   floatingChatButton: {
     position: 'absolute',
     right: 20,
-    bottom: 120,  // ✅ FIXED: Increased from 100 to 120 to clear tab bar
+    bottom: 100, // Above tab bar (tab bar is ~80-90px)
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -626,6 +611,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    zIndex: 1000,  // ✅ ADDED: Ensure button stays on top
-},
+    zIndex: 1000,
+  },
 });

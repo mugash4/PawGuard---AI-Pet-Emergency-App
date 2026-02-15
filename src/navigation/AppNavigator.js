@@ -10,7 +10,6 @@ const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(null);
-  const [navigationRef, setNavigationRef] = useState(null);
 
   useEffect(() => {
     checkOnboarding();
@@ -27,9 +26,9 @@ export default function AppNavigator() {
     }
   };
 
-  // CRITICAL FIX: Complete onboarding and immediately navigate to Main
+  // ✅ FIXED: Complete onboarding and go DIRECTLY to Main (skip subscription)
   const handleOnboardingComplete = async (navigation) => {
-    console.log('✅ handleOnboardingComplete called');
+    console.log('✅ handleOnboardingComplete called - Going DIRECTLY to Main');
     
     try {
       // Save to AsyncStorage first
@@ -39,8 +38,7 @@ export default function AppNavigator() {
       // Update state
       setHasCompletedOnboarding(true);
       
-      // CRITICAL FIX: Immediately reset navigation stack to Main
-      // This forces the navigation to change without waiting for re-render
+      // ✅ FIXED: Reset navigation stack to Main (NO SUBSCRIPTION SCREEN)
       if (navigation) {
         navigation.dispatch(
           CommonActions.reset({
@@ -48,7 +46,7 @@ export default function AppNavigator() {
             routes: [{ name: 'Main' }],
           })
         );
-        console.log('✅ Navigation reset to Main');
+        console.log('✅ Navigation reset to Main (subscription screen skipped)');
       }
     } catch (error) {
       console.error('❌ Error completing onboarding:', error);
@@ -62,20 +60,16 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!hasCompletedOnboarding ? (
-        <>
-          <Stack.Screen 
-            name="Onboarding" 
-            component={OnboardingScreen}
-            initialParams={{ 
-              onComplete: handleOnboardingComplete
-            }}
-          />
-          <Stack.Screen 
-            name="Subscription" 
-            component={SubscriptionScreen}
-          />
-        </>
+        // ✅ FIXED: Only show Onboarding (NO Subscription in stack)
+        <Stack.Screen 
+          name="Onboarding" 
+          component={OnboardingScreen}
+          initialParams={{ 
+            onComplete: handleOnboardingComplete
+          }}
+        />
       ) : (
+        // ✅ After onboarding, show Main + Subscription as modal (for upgrades)
         <>
           <Stack.Screen name="Main" component={MainTabNavigator} />
           <Stack.Screen 

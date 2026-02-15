@@ -96,6 +96,16 @@ export default function EmergencyScreen({ navigation, route }) {
     }
   };
 
+  // ✅ FIXED: Proper navigation to AIChat screen in HomeStack
+  const handleOpenAIChat = () => {
+    try {
+      // Navigate to Home tab, then to AIChat screen within that stack
+      navigation.navigate('Home', { screen: 'AIChat' });
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -300,10 +310,12 @@ export default function EmergencyScreen({ navigation, route }) {
           )}
         </SafeAreaView>
       </Modal>
-      {/* Floating AI Chat Button */}
+
+      {/* ✅ FIXED: Floating AI Chat Button with proper navigation */}
       <TouchableOpacity
         style={styles.floatingChatButton}
-        onPress={() => navigation.navigate('AIChat')}
+        onPress={handleOpenAIChat}
+        activeOpacity={0.8}
       >
         <Ionicons name="chatbubbles" size={28} color="#FFFFFF" />
       </TouchableOpacity>
@@ -594,27 +606,26 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   floatingChatButton: {
-  position: 'absolute',
-  right: 20,
-  bottom: 120, // Above tab bar
-  width: 60,
-  height: 60,
-  borderRadius: 30,
-  backgroundColor: COLORS.primary,
-  justifyContent: 'center',
-  alignItems: 'center',
-  ...Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-    },
-    android: {
-      elevation: 8,
-    },
-  }),
-  zIndex: 1000,  // ✅ ADDED: Ensure button stays on top
-},
-
+    position: 'absolute',
+    right: 20,
+    bottom: 100, // Above tab bar (tab bar is ~80-90px)
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+    zIndex: 1000,
+  },
 });

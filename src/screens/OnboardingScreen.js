@@ -48,7 +48,7 @@ export default function OnboardingScreen({ navigation, route }) {
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // CRITICAL FIX: Get the onComplete callback directly
+  // ✅ FIXED: Get the onComplete callback
   const onComplete = route?.params?.onComplete;
 
   const handleScroll = Animated.event(
@@ -69,22 +69,22 @@ export default function OnboardingScreen({ navigation, route }) {
         animated: true,
       });
     } else {
-      // CRITICAL FIX: Navigate to Subscription with the onComplete callback
-      console.log('🚀 Navigating to Subscription from Onboarding');
-      navigation.navigate('Subscription', { 
-        onComplete: onComplete,
-        fromOnboarding: true 
-      });
+      // ✅ FIXED: On last slide, complete onboarding and go to Main
+      handleComplete();
     }
   };
 
   const handleSkip = () => {
-    // CRITICAL FIX: Navigate to Subscription with the onComplete callback
-    console.log('⏭️ Skipping to Subscription from Onboarding');
-    navigation.navigate('Subscription', { 
-      onComplete: onComplete,
-      fromOnboarding: true 
-    });
+    // ✅ FIXED: Skip goes directly to Main (no subscription)
+    handleComplete();
+  };
+
+  // ✅ NEW: Complete onboarding function
+  const handleComplete = () => {
+    console.log('🏁 Onboarding complete - navigating to Main app');
+    if (onComplete) {
+      onComplete(navigation);
+    }
   };
 
   const renderSlide = (item, index) => {

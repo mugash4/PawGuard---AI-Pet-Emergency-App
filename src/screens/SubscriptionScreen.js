@@ -293,7 +293,7 @@ export default function SubscriptionScreen({ navigation, route }) {
             [
               {
                 text: 'Get Started',
-                onPress: () => navigateToMain(true),
+                onPress: () => closeSubscriptionScreen(),
               },
             ]
           );
@@ -320,31 +320,14 @@ export default function SubscriptionScreen({ navigation, route }) {
     };
   }, []);
 
-  const navigateToMain = async (completedPurchase = false) => {
-    console.log('🚀 navigateToMain called');
-    console.log('   - From onboarding:', fromOnboarding);
-    console.log('   - Has callback:', !!onComplete);
-    console.log('   - Completed purchase:', completedPurchase);
-
-    try {
-      if (fromOnboarding && onComplete) {
-        console.log('✅ Using onComplete callback (onboarding flow)');
-        await onComplete(navigation);
-      } else {
-        console.log('✅ Going back (modal mode)');
-        if (navigation.canGoBack()) {
-          navigation.goBack();
-        } else {
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'Main' }],
-            })
-          );
-        }
-      }
-    } catch (error) {
-      console.error('❌ Navigation error:', error);
+  // ✅ FIXED: Simplified close function
+  const closeSubscriptionScreen = () => {
+    console.log('🚪 Closing subscription screen');
+    
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Fallback: reset to Main if can't go back
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -374,7 +357,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           [
             {
               text: 'Continue',
-              onPress: () => navigateToMain(true),
+              onPress: () => closeSubscriptionScreen(),
             },
           ]
         );
@@ -390,18 +373,6 @@ export default function SubscriptionScreen({ navigation, route }) {
     }
   };
 
-  // ✅ NEW: Handle "Continue with Free Plan" button
-  const handleContinueWithFreePlan = () => {
-    console.log('🆓 User chose to continue with free plan');
-    navigateToMain(false);
-  };
-
-  // ✅ NEW: Handle close button
-  const handleClose = () => {
-    console.log('❌ User closed subscription screen');
-    navigateToMain(false);
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -415,10 +386,10 @@ export default function SubscriptionScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* ✅ NEW: Close Button (X) in top right corner */}
+      {/* ✅ Close Button (X) in top right corner */}
       <TouchableOpacity 
         style={styles.closeButton}
-        onPress={handleClose}
+        onPress={closeSubscriptionScreen}
         activeOpacity={0.7}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
@@ -453,7 +424,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           ))}
         </View>
 
-        {/* ✅ PLANS: Display REGULAR prices (not trial prices) */}
+        {/* Plans */}
         <View style={styles.plansContainer}>
           {plans.map((plan) => (
             <TouchableOpacity
@@ -483,7 +454,6 @@ export default function SubscriptionScreen({ navigation, route }) {
                   )}
                 </View>
                 <View style={styles.planPrice}>
-                  {/* ✅ DISPLAYS REGULAR PRICE: $4.99 or $39.99 */}
                   <Text style={styles.priceAmount}>{plan.price}</Text>
                   <Text style={styles.pricePeriod}>{plan.period}</Text>
                 </View>
@@ -496,7 +466,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           ))}
         </View>
 
-        {/* ✅ BUTTON: Shows 7-Day Free Trial */}
+        {/* Subscribe Button */}
         <TouchableOpacity 
           style={[styles.trialButton, purchasing && styles.trialButtonDisabled]} 
           onPress={handleSubscribe}
@@ -510,7 +480,6 @@ export default function SubscriptionScreen({ navigation, route }) {
           )}
         </TouchableOpacity>
 
-        {/* ✅ NOTE: Clarifies trial then regular price */}
         <Text style={styles.trialNote}>
           Try free for 7 days, then {plans.find(p => p.id === selectedPlan)?.price}{plans.find(p => p.id === selectedPlan)?.period}
         </Text>
@@ -525,10 +494,10 @@ export default function SubscriptionScreen({ navigation, route }) {
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
 
-        {/* ✅ NEW: Continue with Free Plan Button */}
+        {/* ✅ Continue with Free Plan Button */}
         <TouchableOpacity 
           style={styles.freePlanButton} 
-          onPress={handleContinueWithFreePlan}
+          onPress={closeSubscriptionScreen}
           disabled={purchasing || loading}
           activeOpacity={0.7}
         >
@@ -550,7 +519,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  // ✅ NEW: Close button style
   closeButton: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 10,
@@ -731,7 +699,6 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
     fontWeight: '600',
   },
-  // ✅ NEW: Free Plan button style
   freePlanButton: {
     marginHorizontal: SPACING.xl,
     paddingVertical: 12,
