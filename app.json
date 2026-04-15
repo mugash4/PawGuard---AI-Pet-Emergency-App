@@ -2,7 +2,7 @@
   "expo": {
     "name": "PawGuard",
     "slug": "pawguard",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -34,7 +34,7 @@
         "backgroundColor": "#FF8C61"
       },
       "package": "com.pawguard.app",
-      "versionCode": 10,
+      "versionCode": 11,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-2371616866592450~9934191141"
       },

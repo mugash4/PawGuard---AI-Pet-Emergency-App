@@ -29,6 +29,7 @@ import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import AdBanner from '../components/AdBanner';
 import { savePetProfile, getPetProfile } from '../services/storageService';
 import { scheduleVaccinationReminder, scheduleHealthCheckReminder } from '../services/notificationService';
+import { navigateToSubscription } from '../utils/navigationHelper';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
 
 export default function PetProfileScreen({ navigation }) {
@@ -62,9 +63,14 @@ export default function PetProfileScreen({ navigation }) {
   const [vaccinationDate, setVaccinationDate] = useState(new Date());
   const [showVaccinationDatePicker, setShowVaccinationDatePicker] = useState(false);
 
+  const isPremiumUser = user?.isPremium === true;
+  const canAddAnotherPet = isPremiumUser || pets.length < 1;
+
   useEffect(() => {
-    loadPetProfiles();
-  }, []);
+    if (user?.userId) {
+      loadPetProfiles();
+    }
+  }, [user?.userId]);
 
   const loadPetProfiles = async () => {
     try {
@@ -95,7 +101,28 @@ export default function PetProfileScreen({ navigation }) {
     }
   };
 
+  const showPetLimitAlert = () => {
+    Alert.alert(
+      'Premium Feature',
+      'Free users can add only 1 pet profile. Upgrade to Premium to add unlimited pets.',
+      [
+        { text: 'Not Now', style: 'cancel' },
+        {
+          text: 'Upgrade',
+          onPress: async () => {
+            await navigateToSubscription(navigation);
+          },
+        },
+      ]
+    );
+  };
+
   const openAddPetModal = () => {
+    if (!canAddAnotherPet) {
+      showPetLimitAlert();
+      return;
+    }
+
     resetForm();
     setEditingPet(null);
     setModalVisible(true);
@@ -136,6 +163,11 @@ export default function PetProfileScreen({ navigation }) {
   const savePet = async () => {
     if (!petName.trim()) {
       Alert.alert('Name Required', 'Please enter your pet\'s name.');
+      return;
+    }
+
+    if (!editingPet && !canAddAnotherPet) {
+      showPetLimitAlert();
       return;
     }
 
