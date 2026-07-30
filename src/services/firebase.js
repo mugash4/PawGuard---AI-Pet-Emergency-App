@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 
 // Your Firebase configuration
@@ -20,12 +20,10 @@ const auth = getAuth(app);
 
 let authReady = false;
 let authReadyResolve;
-let authReadyReject;
 
 // Create promise for auth readiness
-const authReadyPromise = new Promise((resolve, reject) => {
+const authReadyPromise = new Promise((resolve) => {
   authReadyResolve = resolve;
-  authReadyReject = reject;
 });
 
 // Auto sign-in anonymously
@@ -42,32 +40,17 @@ signInAnonymously(auth)
     if (authReadyResolve) authReadyResolve(false);
   });
 
-// Enable offline persistence (optional but recommended)
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db)
-    .then(() => {
-      console.log('✅ Firebase offline persistence enabled');
-    })
-    .catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('⚠️ Multiple tabs open, persistence disabled');
-      } else if (err.code === 'unimplemented') {
-        console.warn('⚠️ Browser does not support persistence');
-      }
-    });
-}
-
 /**
  * Wait for authentication to be ready
  * @returns {Promise<boolean>} True if auth succeeded, false if failed (but app can continue)
  */
 export const waitForAuth = async () => {
   if (authReady) return true;
-  
+
   try {
     const result = await Promise.race([
       authReadyPromise,
-      new Promise((_, reject) => 
+      new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Auth timeout')), 10000)
       )
     ]);

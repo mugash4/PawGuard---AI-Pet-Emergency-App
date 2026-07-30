@@ -11,7 +11,7 @@
         "buildType": "apk"
       },
       "env": {
-        "KOTLIN_VERSION": "2.0.21"
+        "KOTLIN_VERSION": "2.2.0"
       }
     },
     "preview": {
@@ -20,7 +20,7 @@
         "buildType": "apk"
       },
       "env": {
-        "KOTLIN_VERSION": "2.0.21"
+        "KOTLIN_VERSION": "2.2.0"
       }
     },
     "production": {
@@ -30,7 +30,7 @@
         "gradleCommand": ":app:bundleRelease"
       },
       "env": {
-        "KOTLIN_VERSION": "2.0.21"
+        "KOTLIN_VERSION": "2.2.0"
       }
     }
   },

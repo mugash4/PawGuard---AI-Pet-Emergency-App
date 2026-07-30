@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,24 +14,74 @@ import { UserProvider } from './src/context/UserContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 // Keep splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Ignore if already prevented
+});
+
+const isInternetAvailable = (state) => {
+  if (!state) return false;
+  return Boolean(state.isConnected) && state.isInternetReachable !== false;
+};
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [initError, setInitError] = useState(null);
+  const [isOnline, setIsOnline] = useState(null);
+  const [networkChecked, setNetworkChecked] = useState(false);
+  const [servicesInitialized, setServicesInitialized] = useState(false);
 
   useEffect(() => {
-    async function prepare() {
+    let isMounted = true;
+
+    const applyNetworkState = (state) => {
+      if (!isMounted) return;
+      setIsOnline(isInternetAvailable(state));
+      setNetworkChecked(true);
+    };
+
+    NetInfo.fetch()
+      .then(applyNetworkState)
+      .catch((error) => {
+        console.warn('⚠️ Initial network check failed:', error?.message || error);
+        if (isMounted) {
+          setIsOnline(false);
+          setNetworkChecked(true);
+        }
+      });
+
+    const unsubscribe = NetInfo.addEventListener(applyNetworkState);
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function prepareOnlineServices() {
+      if (!networkChecked) return;
+
+      if (!isOnline) {
+        setAppIsReady(true);
+        return;
+      }
+
+      if (servicesInitialized) {
+        setAppIsReady(true);
+        return;
+      }
+
       try {
-        console.log('🚀 Starting app initialization...');
+        console.log('🚀 Starting online-only app initialization...');
 
         // Minimal initial delay for smooth startup
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Initialize services in parallel with proper error handling
         const initPromises = [];
 
-        // Promise 1: Firebase (with timeout and graceful degradation)
+        // Firebase
         initPromises.push(
           Promise.resolve().then(async () => {
             try {
@@ -39,7 +96,7 @@ export default function App() {
           })
         );
 
-        // Promise 2: AdMob (with timeout and graceful degradation)
+        // AdMob
         initPromises.push(
           Promise.resolve().then(async () => {
             try {
@@ -54,7 +111,7 @@ export default function App() {
           })
         );
 
-        // Promise 3: Notifications (with timeout and graceful degradation)
+        // Notifications
         initPromises.push(
           Promise.resolve().then(async () => {
             try {
@@ -69,42 +126,65 @@ export default function App() {
           })
         );
 
-        // Wait for all services with timeout
         await Promise.race([
           Promise.allSettled(initPromises),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Initialization timeout')), 5000)
           )
         ]).catch(() => {
           console.log('⏱️ Some services timed out, continuing anyway...');
         });
 
-        // Small delay for smooth transition
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        console.log('✅ App ready!');
+        if (!cancelled) {
+          setServicesInitialized(true);
+          console.log('✅ Online-only app ready!');
+        }
       } catch (e) {
         console.error('❌ Critical error during initialization:', e);
-        setInitError(e);
+        if (!cancelled) {
+          setInitError(e);
+        }
       } finally {
-        setAppIsReady(true);
+        if (!cancelled) {
+          setAppIsReady(true);
+        }
       }
     }
 
-    prepare();
-  }, []);
+    prepareOnlineServices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [networkChecked, isOnline, servicesInitialized]);
 
   useEffect(() => {
-    if (appIsReady) {
-      // Hide splash screen with animation
+    if (appIsReady && networkChecked) {
       SplashScreen.hideAsync().catch(err => {
         console.warn('⚠️ Error hiding splash screen:', err);
       });
     }
-  }, [appIsReady]);
+  }, [appIsReady, networkChecked]);
 
-  // Show error screen if critical failure (but continue normally for non-critical errors)
-  if (initError && initError.message.includes('Critical')) {
+  const retryConnectionCheck = async () => {
+    try {
+      const state = await NetInfo.fetch();
+      setIsOnline(isInternetAvailable(state));
+      setNetworkChecked(true);
+    } catch (error) {
+      console.warn('⚠️ Retry network check failed:', error?.message || error);
+      setIsOnline(false);
+      setNetworkChecked(true);
+    }
+  };
+
+  if (!networkChecked || !appIsReady) {
+    return null; // Splash screen is still showing
+  }
+
+  if (initError && initError.message?.includes('Critical')) {
     return (
       <SafeAreaProvider>
         <View style={styles.errorContainer}>
@@ -121,9 +201,22 @@ export default function App() {
     );
   }
 
-  // Wait until app is ready
-  if (!appIsReady) {
-    return null; // Splash screen is still showing
+  if (!isOnline) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.offlineContainer}>
+          <Text style={styles.offlineIcon}>🌐</Text>
+          <Text style={styles.offlineTitle}>Internet connection required</Text>
+          <Text style={styles.offlineText}>
+            PawGuard is now online-only. Connect to the internet to open and use the app.
+          </Text>
+
+          <TouchableOpacity style={styles.retryButton} onPress={retryConnectionCheck}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaProvider>
+    );
   }
 
   return (
@@ -131,6 +224,14 @@ export default function App() {
       <UserProvider>
         <NavigationContainer>
           <AppNavigator />
+          {!servicesInitialized && (
+            <View style={styles.connectingOverlay} pointerEvents="none">
+              <View style={styles.connectingCard}>
+                <ActivityIndicator size="small" color="#FF8C61" />
+                <Text style={styles.connectingText}>Connecting...</Text>
+              </View>
+            </View>
+          )}
         </NavigationContainer>
       </UserProvider>
     </SafeAreaProvider>
@@ -163,5 +264,70 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 8,
+  },
+  offlineContainer: {
+    flex: 1,
+    backgroundColor: '#FFF8F4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  offlineIcon: {
+    fontSize: 56,
+    marginBottom: 16,
+  },
+  offlineTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  offlineText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#4B5563',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#FF8C61',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  connectingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  connectingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  connectingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
   },
 });
