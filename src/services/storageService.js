@@ -10,6 +10,29 @@ const STORAGE_DIR = `${FileSystem.documentDirectory}pawguard/`;
 const METADATA_KEY = 'pet_files_metadata';
 const PET_PROFILES_KEY = 'pet_profiles'; // ✅ NEW: Storage key for pet profiles
 
+const APP_STORAGE_URI_PREFIX = STORAGE_DIR;
+const TEMP_URI_PREFIXES = ['content://', 'file:///data/user/', 'file:///data/data/'];
+
+const getFileExtension = (uri = '') => {
+  const cleanUri = uri.split('?')[0];
+  const match = cleanUri.match(/\.([a-zA-Z0-9]+)$/);
+  return match ? match[1].toLowerCase() : 'jpg';
+};
+
+const isAppStorageUri = (uri = '') => typeof uri === 'string' && uri.startsWith(APP_STORAGE_URI_PREFIX);
+
+const isTemporaryUri = (uri = '') => {
+  if (typeof uri !== 'string' || !uri) return false;
+
+  return (
+    TEMP_URI_PREFIXES.some(prefix => uri.startsWith(prefix)) ||
+    uri.includes('/cache/') ||
+    uri.includes('ImagePicker') ||
+    uri.includes('picker') ||
+    uri.includes('cropped')
+  );
+};
+
 /**
  * Initialize storage directory
  */
@@ -34,20 +57,27 @@ export const initializeStorage = async () => {
  */
 export const saveFile = async (uri, petId, type = 'photo') => {
   try {
+    if (!uri) return null;
+
     await initializeStorage();
-    
-    const fileName = `${petId}_${Date.now()}_${type}.jpg`;
+
+    if (isAppStorageUri(uri)) {
+      return uri;
+    }
+
+    const extension = getFileExtension(uri);
+    const fileName = `${petId}_${Date.now()}_${type}.${extension}`;
     const newPath = `${STORAGE_DIR}${fileName}`;
-    
-    // Copy file to app directory
+
+    // Copy file to app directory so the URI stays valid after app restarts
     await FileSystem.copyAsync({
       from: uri,
       to: newPath,
     });
-    
+
     // Save metadata
     await saveFileMetadata(fileName, petId, type, newPath);
-    
+
     console.log('✅ File saved:', newPath);
     return newPath;
   } catch (error) {
@@ -68,6 +98,8 @@ const saveFileMetadata = async (fileName, petId, type, path) => {
       metadata[petId] = [];
     }
     
+    metadata[petId] = metadata[petId].filter(item => item.path !== path);
+
     metadata[petId].push({
       fileName,
       type,
@@ -144,6 +176,93 @@ export const getStorageSize = async () => {
   } catch (error) {
     console.error('Error getting storage size:', error);
     return 0;
+  }
+};
+
+/**
+ * Persist pet photo inside app storage so it still works after app restart
+ * @param {string|null} uri - Source image URI
+ * @param {string} petId - Pet profile ID
+ * @returns {Promise<string|null>} Persistent image URI
+ */
+export const persistPetPhoto = async (uri, petId) => {
+  if (!uri) return null;
+
+  if (isAppStorageUri(uri)) {
+    return uri;
+  }
+
+  return saveFile(uri, petId, 'photo');
+};
+
+/**
+ * Delete a pet photo only when it belongs to this app's private storage
+ * @param {string|null} uri - Photo URI
+ * @param {string} petId - Pet profile ID
+ */
+export const deletePetPhoto = async (uri, petId) => {
+  if (!uri || !isAppStorageUri(uri)) {
+    return;
+  }
+
+  await deleteFile(uri, petId);
+};
+
+/**
+ * Migrate older temporary photo URIs into app storage when still accessible.
+ * This fixes images that were saved directly from ImagePicker temporary paths.
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} Updated pet profiles
+ */
+export const migrateLegacyPetPhotos = async (userId) => {
+  try {
+    const profiles = await getPetProfile(userId);
+
+    if (!profiles.length) {
+      return profiles;
+    }
+
+    let hasChanges = false;
+    const updatedProfiles = [];
+
+    for (const pet of profiles) {
+      if (!pet?.photo || isAppStorageUri(pet.photo)) {
+        updatedProfiles.push(pet);
+        continue;
+      }
+
+      if (!isTemporaryUri(pet.photo)) {
+        updatedProfiles.push(pet);
+        continue;
+      }
+
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(pet.photo);
+
+        if (!fileInfo.exists) {
+          console.warn(`⚠️ Legacy pet photo is no longer accessible for pet ${pet.id}`);
+          updatedProfiles.push({ ...pet, photo: null });
+          hasChanges = true;
+          continue;
+        }
+
+        const persistentPhoto = await saveFile(pet.photo, pet.id, 'photo');
+        updatedProfiles.push({ ...pet, photo: persistentPhoto });
+        hasChanges = true;
+      } catch (migrationError) {
+        console.warn(`⚠️ Failed to migrate pet photo for pet ${pet.id}:`, migrationError);
+        updatedProfiles.push(pet);
+      }
+    }
+
+    if (hasChanges) {
+      await savePetProfile(userId, updatedProfiles);
+    }
+
+    return updatedProfiles;
+  } catch (error) {
+    console.error('Error migrating legacy pet photos:', error);
+    return getPetProfile(userId);
   }
 };
 

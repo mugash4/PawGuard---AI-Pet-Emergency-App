@@ -2,7 +2,7 @@
   "expo": {
     "name": "PawGuard",
     "slug": "pawguard",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -125,8 +125,7 @@
           }
         }
       ],
-      "./app.plugin.js",
-      "react-native-iap"
+      "expo-iap"
     ],
     "extra": {
       "eas": {

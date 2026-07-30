@@ -1,3 +1,4 @@
+
 /**
  * Pet Profile Screen - COMPLETE IMPLEMENTATION
  * Fixed: German to English, Added vet finder, emergency contact features
@@ -27,7 +28,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useUser } from '../context/UserContext';
 import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import AdBanner from '../components/AdBanner';
-import { savePetProfile, getPetProfile } from '../services/storageService';
+import {
+  savePetProfile,
+  getPetProfile,
+  deletePetProfile,
+  persistPetPhoto,
+  deletePetPhoto,
+  migrateLegacyPetPhotos,
+} from '../services/storageService';
 import { scheduleVaccinationReminder, scheduleHealthCheckReminder } from '../services/notificationService';
 import { navigateToSubscription } from '../utils/navigationHelper';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '../constants/theme';
@@ -72,12 +80,30 @@ export default function PetProfileScreen({ navigation }) {
     }
   }, [user?.userId]);
 
+  useEffect(() => {
+    recoverPendingImageSelection();
+  }, []);
+
   const loadPetProfiles = async () => {
     try {
-      const profiles = await getPetProfile(user.userId);
+      const profiles = await migrateLegacyPetPhotos(user.userId);
       setPets(profiles || []);
     } catch (error) {
       console.error('Error loading pet profiles:', error);
+    }
+  };
+
+  const recoverPendingImageSelection = async () => {
+    if (Platform.OS !== 'android') return;
+
+    try {
+      const pendingResult = await ImagePicker.getPendingResultAsync();
+
+      if (pendingResult && !pendingResult.canceled && pendingResult.assets?.length) {
+        setPetPhoto(pendingResult.assets[0].uri);
+      }
+    } catch (error) {
+      console.warn('Unable to recover pending image picker result:', error);
     }
   };
 
@@ -171,32 +197,40 @@ export default function PetProfileScreen({ navigation }) {
       return;
     }
 
-    const petData = {
-      id: editingPet ? editingPet.id : Date.now().toString(),
-      photo: petPhoto,
-      name: petName.trim(),
-      breed: breed.trim(),
-      birthDate: birthDate.toISOString(),
-      gender,
-      furColor: furColor.trim(),
-      weight: weight.trim(),
-      microchipNumber: microchipNumber.trim(),
-      vetName: vetName.trim(),
-      vetPhone: vetPhone.trim(),
-      notes: notes.trim(),
-      vaccinations,
-      createdAt: editingPet ? editingPet.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const petId = editingPet ? editingPet.id : Date.now().toString();
 
     try {
+      const persistedPhoto = await persistPetPhoto(petPhoto, petId);
+
+      if (editingPet?.photo && editingPet.photo !== persistedPhoto) {
+        await deletePetPhoto(editingPet.photo, editingPet.id);
+      }
+
+      const petData = {
+        id: petId,
+        photo: persistedPhoto,
+        name: petName.trim(),
+        breed: breed.trim(),
+        birthDate: birthDate.toISOString(),
+        gender,
+        furColor: furColor.trim(),
+        weight: weight.trim(),
+        microchipNumber: microchipNumber.trim(),
+        vetName: vetName.trim(),
+        vetPhone: vetPhone.trim(),
+        notes: notes.trim(),
+        vaccinations,
+        createdAt: editingPet ? editingPet.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       let updatedPets;
       if (editingPet) {
         updatedPets = pets.map(p => p.id === editingPet.id ? petData : p);
       } else {
         updatedPets = [...pets, petData];
       }
-      
+
       await savePetProfile(user.userId, updatedPets);
       setPets(updatedPets);
       setModalVisible(false);
@@ -219,8 +253,8 @@ export default function PetProfileScreen({ navigation }) {
           onPress: async () => {
             try {
               const updatedPets = pets.filter(p => p.id !== petId);
-              await savePetProfile(user.userId, updatedPets);
-              setPets(updatedPets);
+              await deletePetProfile(user.userId, petId);
+              setPets(pets.filter(p => p.id !== petId));
             } catch (error) {
               console.error('Error deleting pet:', error);
               Alert.alert('Error', 'Failed to delete pet profile.');
