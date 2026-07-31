@@ -17,7 +17,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pawguard.app",
-      "deploymentTarget": "15.1",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
       },
@@ -107,13 +106,10 @@
         "expo-build-properties",
         {
           "android": {
-            "androidGradlePluginVersion": "8.8.2",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
             "minSdkVersion": 24,
-            "kotlinVersion": "2.1.21",
-            "ksp": "2.1.21-1.0.32",
             "ndkVersion": "27.1.12297006",
             "packagingOptions": {
               "jniLibs": {
