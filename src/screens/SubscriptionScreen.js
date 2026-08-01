@@ -1,3 +1,4 @@
+// src/screens/SubscriptionScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -19,6 +20,7 @@ import { useUser } from '../context/UserContext';
 import { COLORS, FONTS, SPACING, SHADOWS } from '../constants/theme';
 import { CommonActions } from '@react-navigation/native';
 
+// SKUs MUST match exactly what is set in Google Play Console / App Store Connect
 const SUBSCRIPTION_SKUS = Platform.select({
   android: [
     'pawguard_monthly_subscription',
@@ -31,6 +33,7 @@ const SUBSCRIPTION_SKUS = Platform.select({
   default: [],
 });
 
+// Fallback prices shown only if Google Play has not loaded yet
 const DEFAULT_PLANS = [
   {
     id: 'pawguard_monthly_subscription',
@@ -52,9 +55,34 @@ const DEFAULT_PLANS = [
   },
 ];
 
+// On Android subscriptions, Play Billing does NOT populate `displayPrice`.
+// The real formatted price lives in:
+//   subscriptionOfferDetailsAndroid[i].pricingPhases.pricingPhaseList[j].formattedPrice
+// iOS still uses `displayPrice`.
 const getSubscriptionPrice = (subscription) => {
   if (!subscription) return null;
+
+  if (subscription.platform === 'android') {
+    const offers = subscription.subscriptionOfferDetailsAndroid || [];
+    for (const offer of offers) {
+      const phases = offer?.pricingPhases?.pricingPhaseList || [];
+      for (const phase of phases) {
+        if (phase?.formattedPrice) return phase.formattedPrice;
+      }
+    }
+    return null;
+  }
+
   return subscription.displayPrice || null;
+};
+
+// Android subscriptions MUST be purchased with their offer token from
+// subscriptionOfferDetailsAndroid[0].offerToken — without it Play Billing
+// rejects the request with "Invalid request for Android. The 'skus' property is required and must be a non-empty array".
+const getFirstOfferToken = (subscription) => {
+  if (!subscription || subscription.platform !== 'android') return null;
+  const offers = subscription.subscriptionOfferDetailsAndroid || [];
+  return offers[0]?.offerToken || null;
 };
 
 export default function SubscriptionScreen({ navigation, route }) {
@@ -72,7 +100,6 @@ export default function SubscriptionScreen({ navigation, route }) {
     requestPurchase,
     finishTransaction,
     restorePurchases,
-    reconnect,
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
       try {
@@ -118,13 +145,12 @@ export default function SubscriptionScreen({ navigation, route }) {
 
       if (error?.code !== 'E_USER_CANCELLED') {
         Alert.alert(
-          'Purchase Error',
-          error?.message || 'An error occurred during purchase.'
+          'Purchase Failed',
+          error?.message ||
+            'Invalid request for Android. The \'skus\' property is required and must be a non-empty array.',
+          [{ text: 'OK' }]
         );
       }
-    },
-    onError: (error) => {
-      console.error('❌ IAP general error:', error);
     },
   });
 
@@ -137,32 +163,7 @@ export default function SubscriptionScreen({ navigation, route }) {
     console.log('   - From onboarding:', fromOnboarding);
   }, [onComplete, fromOnboarding]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const connectStore = async () => {
-      try {
-        await reconnect();
-      } catch (error) {
-        console.error('❌ Error connecting to store:', error);
-        if (!cancelled) {
-          setLoading(false);
-          Alert.alert(
-            'Connection Issue',
-            'Could not connect to store. Showing default prices. You can still subscribe.',
-            [{ text: 'OK' }]
-          );
-        }
-      }
-    };
-
-    connectStore();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [reconnect]);
-
+  // Load the real Google Play prices as soon as the IAP connection is ready.
   useEffect(() => {
     let cancelled = false;
 
@@ -202,10 +203,13 @@ export default function SubscriptionScreen({ navigation, route }) {
     };
   }, [connected, fetchProducts]);
 
+  // Map real subscription data from the store onto our plan cards.
   useEffect(() => {
     if (!subscriptions || subscriptions.length === 0) {
       return;
     }
+
+    console.log('📦 Received subscriptions:', JSON.stringify(subscriptions, null, 2));
 
     const updatedPlans = DEFAULT_PLANS.map((plan) => {
       const subscription = subscriptions.find((sub) => sub.id === plan.id);
@@ -260,16 +264,18 @@ export default function SubscriptionScreen({ navigation, route }) {
 
       const firstOfferToken =
         Platform.OS === 'android'
-          ? selectedSubscription?.subscriptionOffers?.[0]?.offerToken
+          ? getFirstOfferToken(selectedSubscription)
           : undefined;
 
+      // expo-iap v3 REQUIRES the platform keys to be `android` and `ios`
+      // (in this older file they were wrongly set to `google` / `apple`).
+      // Together with the wrong key, the missing `subscriptionOffers[].offerToken`
+      // caused Play Billing to reject the request with the
+      // "skus property is required and must be a non-empty array" error.
       const request = {
         type: 'subs',
         request: {
-          apple: {
-            sku: selectedPlan,
-          },
-          google: {
+          android: {
             skus: [selectedPlan],
             ...(firstOfferToken
               ? {
@@ -282,8 +288,13 @@ export default function SubscriptionScreen({ navigation, route }) {
                 }
               : {}),
           },
+          ios: {
+            sku: selectedPlan,
+          },
         },
       };
+
+      console.log('📨 Purchase request payload:', JSON.stringify(request));
 
       await requestPurchase(request);
       console.log('✅ Purchase request sent');
@@ -297,7 +308,8 @@ export default function SubscriptionScreen({ navigation, route }) {
 
       Alert.alert(
         'Purchase Failed',
-        error?.message || 'There was an issue processing your subscription. Please try again.',
+        error?.message ||
+          'There was an issue processing your subscription. Please try again.',
         [{ text: 'OK' }]
       );
     }
@@ -311,7 +323,8 @@ export default function SubscriptionScreen({ navigation, route }) {
       await restorePurchases();
 
       const purchases = await getAvailablePurchasesDirect({
-        includeSuspendedAndroid: false,
+        alsoPublishToEventListenerIOS: false,
+        onlyIncludeActiveItemsIOS: true,
       });
 
       console.log('📦 Available purchases:', purchases);
