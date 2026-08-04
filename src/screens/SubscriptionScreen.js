@@ -55,25 +55,92 @@ const DEFAULT_PLANS = [
   },
 ];
 
-// On Android subscriptions, Play Billing does NOT populate `displayPrice`.
-// The real formatted price lives in:
-//   subscriptionOfferDetailsAndroid[i].pricingPhases.pricingPhaseList[j].formattedPrice
-// iOS still uses `displayPrice`.
+// Android subscriptions can include multiple pricing phases, for example:
+//   1) 7-day free trial   -> formattedPrice: 'Free', priceAmountMicros: '0'
+//   2) Intro discount     -> formattedPrice: '$0.99'
+//   3) Recurring full fee -> formattedPrice: '$15.99'
+//
+// The original code returned the FIRST formatted price, which is why the UI was
+// showing 'Free' instead of the real recurring price. We now select the LAST paid
+// phase so the card always shows the actual subscription amount after the trial.
+const getAndroidRecurringPhase = (subscription) => {
+  if (!subscription || subscription.platform !== 'android') {
+    return null;
+  }
+
+  const offers = subscription.subscriptionOfferDetailsAndroid || [];
+
+  for (const offer of offers) {
+    const phases = offer?.pricingPhases?.pricingPhaseList || [];
+
+    const paidPhases = phases.filter((phase) => {
+      const micros = Number(phase?.priceAmountMicros || 0);
+      return micros > 0 && phase?.formattedPrice;
+    });
+
+    if (paidPhases.length > 0) {
+      return paidPhases[paidPhases.length - 1];
+    }
+
+    const lastFormattedPhase = [...phases]
+      .reverse()
+      .find((phase) => phase?.formattedPrice);
+
+    if (lastFormattedPhase) {
+      return lastFormattedPhase;
+    }
+  }
+
+  return null;
+};
+
 const getSubscriptionPrice = (subscription) => {
   if (!subscription) return null;
 
   if (subscription.platform === 'android') {
-    const offers = subscription.subscriptionOfferDetailsAndroid || [];
-    for (const offer of offers) {
-      const phases = offer?.pricingPhases?.pricingPhaseList || [];
-      for (const phase of phases) {
-        if (phase?.formattedPrice) return phase.formattedPrice;
-      }
-    }
-    return null;
+    const recurringPhase = getAndroidRecurringPhase(subscription);
+    return recurringPhase?.formattedPrice || subscription.displayPrice || null;
   }
 
   return subscription.displayPrice || null;
+};
+
+const getSubscriptionNumericPrice = (subscription) => {
+  if (!subscription) return null;
+
+  if (subscription.platform === 'android') {
+    const recurringPhase = getAndroidRecurringPhase(subscription);
+    const micros = Number(recurringPhase?.priceAmountMicros || 0);
+
+    if (Number.isFinite(micros) && micros > 0) {
+      return micros / 1000000;
+    }
+  }
+
+  if (typeof subscription.price === 'number' && Number.isFinite(subscription.price)) {
+    return subscription.price;
+  }
+
+  return null;
+};
+
+const getSubscriptionPeriod = (subscription, fallbackPeriod) => {
+  if (!subscription) return fallbackPeriod;
+
+  if (subscription.platform === 'android') {
+    const recurringPhase = getAndroidRecurringPhase(subscription);
+    const billingPeriod = recurringPhase?.billingPeriod;
+
+    if (billingPeriod === 'P1M') return '/month';
+    if (billingPeriod === 'P1Y') return '/year';
+  }
+
+  if (subscription.platform === 'ios') {
+    if (subscription.subscriptionPeriodUnitIOS === 'MONTH') return '/month';
+    if (subscription.subscriptionPeriodUnitIOS === 'YEAR') return '/year';
+  }
+
+  return fallbackPeriod;
 };
 
 // Android subscriptions MUST be purchased with their offer token from
@@ -219,17 +286,21 @@ export default function SubscriptionScreen({ navigation, route }) {
       }
 
       const storePrice = getSubscriptionPrice(subscription);
+      const storeNumericPrice = getSubscriptionNumericPrice(subscription);
+      const storePeriod = getSubscriptionPeriod(subscription, plan.period);
 
       if (!storePrice) {
         return plan;
       }
 
-      const numericValue = parseFloat(storePrice.replace(/[^0-9.]/g, ''));
-
       return {
         ...plan,
         price: storePrice,
-        priceValue: Number.isFinite(numericValue) ? numericValue : plan.priceValue,
+        period: storePeriod,
+        priceValue:
+          typeof storeNumericPrice === 'number' && Number.isFinite(storeNumericPrice)
+            ? storeNumericPrice
+            : plan.priceValue,
       };
     });
 
