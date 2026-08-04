@@ -30,7 +30,7 @@
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
-      },
+      }, 
       "env": {
         "ORG_GRADLE_PROJECT_kotlinVersion": "2.0.21",
         "KOTLIN_VERSION": "2.0.21"
